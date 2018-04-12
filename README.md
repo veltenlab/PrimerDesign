@@ -8,7 +8,7 @@ Primers are checked against each other to select sets of primers with minimal 3'
 
 Several use cases are described in detail below.
 
-##Basic setup
+## Basic setup
 
 Make sure that the following R libraries are avilable:
 
@@ -132,6 +132,8 @@ Rscript Masterscript.R --coordinates coordinates.txt --gDNA --genome hg19 \
 | --TmInner | num,num,num | Melting temperature of inner primers (optimal,min,max) |
 | --nCharOuter | int,int,int |Length of outer or RT primers (optimal,min,max) |
 | --nCharInner | int,int,int | Length of inner primers (optimal,min,max) |
+| --prefixOuter | DNA sequence | Prepend all outer or RT primers with a DNA sequence |
+| --prefixInner | DNA sequence | Prepend all inner primers with a DNA sequence |
 | --numprimers | int | Number of primers to spit out during initial primere3 calls - higher number make blasting and optimisation slow but increase the chance to find good primers |
 | --help | none | Prints a list of arguments |
 | --verbose | none | Create a lot of output |
