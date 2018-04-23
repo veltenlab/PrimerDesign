@@ -37,6 +37,7 @@ if ( !is.null(opt$help) ) {
   q(status=1)
 }
 
+
 #set some reasonable defaults for the options that are needed,
 #but were not specified.
 #/g/steinmetz/project/singcellTxn/AML/2016_12_TargetedscDNASeqTest/PrimerDesign/sample11_targets_extended.txt
@@ -404,7 +405,7 @@ if (nested == "none") {
     x$right_outer <- NA
     x$left_outer <- NA
     x$blast_outer_warn <- F
-  
+    x
   })
 }
 
