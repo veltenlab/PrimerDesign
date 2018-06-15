@@ -330,7 +330,7 @@ if (nested == "RT" | nested == "RTonly") {
     
     primer3result <- strsplit(primer3result, ";")
     for ( i in 1:length(primer3result)) {
-      targets[[i]]$right_outer <- strsplit(primer3result[[i]][3], ",")[[1]]
+      targets[[i]]$right_outer <-  strsplit(primer3result[[i]][ ifelse(targets[[i]]$sense,3,2 )], ",")[[1]]
       targets[[i]]$left_outer <- NA
     }
     

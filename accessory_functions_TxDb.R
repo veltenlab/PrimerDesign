@@ -75,10 +75,19 @@ getcDNASeqfromCoordinate <- function(targets, TxDb, Bsgenome, rangeInner, margin
   exonTargets <- split(exonTargets, queryHits(exonTargets))
   sequences <- lapply(exonTargets, function(x) {
     #identify all exons associated with the transcript
+    if (length(unique(unlist(cds[subjectHits(x)]$gene_id))) > 1) {
+      cat("WARNING: ",as.character(targets[unique(queryHits(x))]), "Overlaps multiple genes:\n", paste(unique(unlist(cds[subjectHits(x)]$gene_id)),sep=","), "\nPlease enter gene id of the one to select:\n")
+      use <- readLines(file("stdin"),n=1)
+      x <- x[unlist(cds[subjectHits(x)]$gene_id) == use]
+    }
+    
+    sense <- unique(strand(cds[subjectHits(x)])) == "+"
+    
+    
     txids <- lapply(subjectHits(x), function(y) cds$tx_id[[y]])
     txids <- txids[[which.max(sapply(txids,length))]]
     thisexons <- exons(TxDb, columns = c("tx_id","exon_id","gene_id"), filter = list(tx_id = txids))
-    thisexons <- thisexons[sapply(thisexons$tx_id, function(y) all(txids %in% y))] #exons that occur in all transcripts only
+    if (!width(thisexons[sapply(thisexons$tx_id, function(y) all(txids %in% y))]) < rangeInner * margin) thisexons <- thisexons[sapply(thisexons$tx_id, function(y) all(txids %in% y))] #exons that occur in all transcripts only
     
     genes <- unique(unlist(thisexons$gene_id))
     symbol <- AnnotationDbi::select(org, keys=genes, columns="SYMBOL", keytype="ENSEMBL")[,"SYMBOL"]
@@ -103,7 +112,7 @@ getcDNASeqfromCoordinate <- function(targets, TxDb, Bsgenome, rangeInner, margin
     endpos <- tostart+fromstart+width(target)+r
     innerSeq <- substr(sequences,startpos,endpos)
     posInString <- ifelse(startpos > 0, r, tostart+fromstart)
-    list(innerSeq,posInString,sequences,symbol)
+    list(innerSeq,posInString,sequences,symbol,sense)
   })
   
   targets$seq <- sapply(sequences, "[[",1)
@@ -111,6 +120,8 @@ getcDNASeqfromCoordinate <- function(targets, TxDb, Bsgenome, rangeInner, margin
   targets$endpos <- sapply(sequences, "[[",2) #check how to go about range targets
   targets$id <- paste(sapply(sequences, "[[",4), as.character(targets),sep="--")
   targets$completeSeq <- sapply(sequences, "[[",3)
+  targets$sense <- sapply(sequences, "[[",5)
+  
   
   out <- lapply(targets, function(x) {
     list(Range = reduce(x),
@@ -119,7 +130,8 @@ getcDNASeqfromCoordinate <- function(targets, TxDb, Bsgenome, rangeInner, margin
          endpos = x$endpos,
          completeSeq = x$completeSeq,
          ExonSelectionWarning = F,
-         id = x$id)
+         id = x$id,
+         sense = x$sense)
   })
 }
 
@@ -200,7 +212,7 @@ getcDNASeqfromSymbol <- function(symbols, rangeOuter, margin = 2,verbose =F) {
       }
       
 
-    list(seq = seq, pos = splicesite, endpos = splicesite, id = unique(x$symbol), completeSeq = seq, ExonSelectionWarning = warn)
+    list(seq = seq, pos = splicesite, endpos = splicesite, id = unique(x$symbol), completeSeq = seq, ExonSelectionWarning = warn, sense = unique(strand(x)) == "+")
     #list(seq = seq, completeSeq=seq, splicesite= splicesite, gene = unique(x$symbol), exons = target)
   })
   
@@ -210,11 +222,12 @@ getcDNASeqfromSymbol <- function(symbols, rangeOuter, margin = 2,verbose =F) {
 
 getLinesRT <- function(x, numprimers,range, primerParams) {
   c(sprintf("SEQUENCE_ID=%s",x$id),
-    sprintf("SEQUENCE_TEMPLATE=%s",substr(x$seq,x$end_inner_product,nchar(x$seq))),
+    sprintf("SEQUENCE_TEMPLATE=%s",ifelse(x$sense, substr(x$seq,x$end_inner_product,nchar(x$seq)),
+            substr(x$seq,1,x$start_inner_product))),
     "PRIMER_TASK=generic",
-    "PRIMER_PICK_LEFT_PRIMER=0",
+    sprintf("PRIMER_PICK_LEFT_PRIMER=%d",ifelse(x$sense, 0,1)),
     "PRIMER_PICK_INTERNAL_OLIGO=0",
-    "PRIMER_PICK_RIGHT_PRIMER=1",
+    sprintf("PRIMER_PICK_RIGHT_PRIMER=%d",ifelse(x$sense, 1,0)),
     sprintf("PRIMER_OPT_SIZE=%d",primerParams$nChar[1]), #was 3 bases shorter
     sprintf("PRIMER_MIN_SIZE=%d",primerParams$nChar[2]),
     sprintf("PRIMER_MAX_SIZE=%d",primerParams$nChar[3]),
