@@ -2,9 +2,8 @@
 ## FUN: blast primer sequences against genome sequence and return found hits
 #  for each primer.
 
-#/g/steinmetz/gschwind/software/blast+/ncbi-blast-2.6.0+/bin/makeblastdb -in /g/steinmetz/genome/Homo_sapiens/GRCh38/fasta/GRCh38.primary_assembly.genome.ERCC.fa -input_type fasta -dbtype nucl -out /Volumes/steinmetz/velten/Scripts/Enhancer/blast-170630165622/blastdb
 make_blast_db <- function(fasta, tmpdir = getwd(),
-                          blast_root = "/g/steinmetz/gschwind/software/blast+/ncbi-blast-2.6.0+/bin") {
+                          blast_root = NCBI_path) {
   tmpdir <- paste0(tmpdir, "/blast-", format(Sys.time(), "%y%m%d%H%M%S"))
   dir.create(tmpdir)
   
@@ -22,7 +21,7 @@ make_blast_db <- function(fasta, tmpdir = getwd(),
 }
 
 blast_primers <- function(primers, tmpdir,
-                          blast_root = "/g/steinmetz/gschwind/software/blast+/ncbi-blast-2.6.0+/bin"){
+                          blast_root = NCBI_path){
   
   # create unique tmpdir
   blastdb <- paste0(tmpdir ,"/blastdb")

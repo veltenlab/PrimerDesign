@@ -8,58 +8,36 @@ Primers are checked against each other to select sets of primers with minimal 3'
 
 Several use cases are described in detail below.
 
-## Basic setup
+## Requirements and first run
 
-Make sure that the following R libraries are avilable:
+PrimerDesign tool requires primer3 and NCBI Blast to be available on your system; the paths need to be specified by the user in the first run of the program. All other requirements are installed automatically when the package if first run; in case you do not have write permissions to your `.libPaths()`, uncomment the first line of the scripot and specifiy a writeable folder that R libraries will be installed to. 
 
-```
-library(getopt)
-library(GenomicRanges)
-library(rtracklayer)
-library(GenomicFeatures)
-library(magrittr)
-library(stringr)
-```
-and, depending on the genome version you wish to use:
+Genome data will be downloaded and prepared in the first run for a given genom (mm10, hg19 or hg38), so please be patient when you first run this software. 
 
-```
-library(BSgenome.Mmusculus.UCSC.mm10)
-library(org.Mm.eg.db)
-library(BSgenome.Hsapiens.UCSC.hg19)
-library(BSgenome.Hsapiens.UCSC.hg38)
-library(org.Hs.eg.db)
-```
-Furthermore, I currently have a number of resources hardcoded into the Script, these should be bundled upon release.
-
-Genome and transcriptome FASTA files (for construction of blast DB)
-
-```
-/g/steinmetz/genome/Homo_sapiens/37.68/fasta/DNA/Homo_sapiens.GRCh37.68.dna.chromosomes.withERCC.fa
-/g/steinmetz/genome/Homo_sapiens/GRCh38/fasta/GRCh38.primary_assembly.genome.ERCC.fa
-/g/steinmetz/genome/Homo_sapiens/38.79_tx/fasta/Human_ERCC_combined.convenient.fa
-
-/g/steinmetz/genome/Mus_musculus/38.73/fasta/Mus_musculus.GRCm38.73.dna.chromosome.all.spikes.fa
-/g/steinmetz/genome/Mus_musculus/38.91/Mus_musculus.GRCm38.cdna.convenient.all.fa
-```
-
-GFFs of protein coding exons, for construction of a TxDb object
-
-```
-/g/steinmetz/project/singcellTxn/CRISPRdrop/hg38_annotation/Homo_sapiens.GRCh38.89.chr.protein-coding.exon.gtf.gz
-/g/steinmetz/velten/Scripts/Primer/annotation/Homo_sapiens.GRCh37.87.chr.gtf.gz
-/g/steinmetz/velten/Scripts/Primer/annotation/Mus_musculus.GRCm38.92.chr.gtf.gz
-```
-
-Executables
-
-```
-/g/steinmetz/gschwind/software/blast+/ncbi-blast-2.6.0+/bin
-/g/software/linux/pack/primer3-2.3.4/bin/primer3_core
-/g/steinmetz/velten/Scripts/Primer/parsePrimers.pl
-```
 ## Use cases
 
-### Use case 1a: Target a list of genes during reverse transcription
+
+### Use case 1: Target genomic coordinates for MutaSeq
+
+Example: You are looking at some cancer mutations and want to increase coverage. The input should be a list of genomic coordinate provided as a txt file, in format chr2:25470536.
+
+```
+Rscript Masterscript.R --coordinates coordinates.txt --cDNA --genome hg19 \
+--nested none --csv targeted_MutaSeq_primers.csv --bed targeted_MutaSeq_primers.bed --blast --optim
+
+```
+
+### Use case 2: Target genomic coordinates for nested PCR amplification
+
+Genomic coordinates can be on gDNA (e.g. when amplifying material from genomic DNA) or cDNA (e.g. when amplifying from a cDNA library).
+
+```
+Rscript Masterscript.R --coordinates coordinates.txt --gDNA --genome hg19 \
+--nested full --csv targeted_nested_primers.csv --bed targeted_nested_primers.bed --blast --optim
+
+```
+
+### Use case 3: Target genes during reverse transcription
 
 Example: You have a list of marker genes that you need to confidently identify in each cell in a smart-seq2 experiment. The input gene list should be provided as a txt file with one gene symbol per line. 
 Mouse gene symbols are in the format `Actb`
@@ -72,42 +50,11 @@ Usage example (see below for all options)
 
 ```
 Rscript Masterscript.R --geneSymbols Markergenes.txt --cDNA --genome mm10 \
---nested RTonly --lengthRTProduct 300 --csv targeted_rt_primers.csv --bed targeted_rt_primers.bed --blast --optim --prefixOuter AAGCAGTGGTATCAACGCAGAGT
-#RT primers are considered outer primers in the context of all arguments - e.g. --prefixOuter preifxes all RT primers with a common sequence (here, the ISPCR sequence)
+--nested RTonly --lengthRTProduct 300 --csv targeted_rt_primers.csv --bed targeted_rt_primers.bed --blast --optim 
 ```
 
-### Use case 2: Target genomic coordinates during reverse transcription
+Alternatively, --nested RT will additionally design PCR primers.
 
-Example: You are looking at some cancer mutations and want to increase their coverage in a smart-seq2 experiment. The input should be a list of genomic coordinate provided as a txt file, in format `chr2:25470536`
-Primers will always be place on the same exon carrying the mutation or on another exon present in all transcripts containing the exon of interest (let's double check this behavior!)
-
-```
-Rscript Masterscript.R --coordinates coordinates.txt --cDNA --genome hg19 \
---nested RTonly --lengthRTProduct 600 --csv targeted_rt_primers.csv --bed targeted_rt_primers.bed --blast --optim --prefixOuter AAGCAGTGGTATCAACGCAGAGT
-```
-
-### Use case 3: Target genomic coordinates during reverse transcription + smartSeq PCR
-
-As in 10.1038/nm.4336
-
-```
-Rscript Masterscript.R --coordinates coordinates.txt --cDNA --genome hg19 \
---nested RT --lengthRTProduct 1000 --lengthInnerProduct 500,1000 --csv targeted_rt_primers.csv --bed targeted_rt_primers.bed --blast --optim --prefixInner AAGCAGTGGTATCAACGCAGAGT
-#RT primers are considered outer primers and PCR primers are considered inner primers in that setting
-
-```
-
-
-### Use case 4: Target genomic coordinates for nested PCRs
-
-Genomic coordinates can be on gDNA (e.g. when amplifying material from single cells or single-cell derived colonies) or cDNA (e.g. when amplifying from a smartseq2 library).
-
-```
-Rscript Masterscript.R --coordinates coordinates.txt --gDNA --genome hg19 \
---nested full --csv targeted_nested_primers.csv --bed targeted_nested_primers.bed --blast --optim --prefixInner XXXXX
-#RT primers are considered outer primers and PCR primers are considered inner primers in that setting
-
-```
 
 ## Overview of all options
 

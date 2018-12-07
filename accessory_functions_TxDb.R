@@ -238,7 +238,7 @@ getLinesRT <- function(x, numprimers,range, primerParams) {
     "P3_FILE_FLAG=0",
     "PRIMER_EXPLAIN_FLAG=1",
     sprintf("PRIMER_NUM_RETURN=%d",numprimers),
-    "PRIMER_THERMODYNAMIC_PARAMETERS_PATH=/g/steinmetz/velten/Scripts/Primer/primer3-2.3.7/src/primer3_config/",
+    sprintf("PRIMER_THERMODYNAMIC_PARAMETERS_PATH=%s",file.path(primer3_path,"primer3_config/")),
     "=")
 }
 
@@ -264,7 +264,7 @@ getLines <- function(x, numprimers, range, primerParams) {
     "P3_FILE_FLAG=0",
     "PRIMER_EXPLAIN_FLAG=1",
     sprintf("PRIMER_NUM_RETURN=%d",numprimers),
-    "PRIMER_THERMODYNAMIC_PARAMETERS_PATH=/g/steinmetz/velten/Scripts/Primer/primer3-2.3.7/src/primer3_config/",
+    sprintf("PRIMER_THERMODYNAMIC_PARAMETERS_PATH=%s",file.path(primer3_path,"primer3_config/")),
     "=")
 }
 
@@ -287,7 +287,7 @@ getLinesOuter <- function(x, numprimers, range, primerParams) {
     "P3_FILE_FLAG=0",
     "PRIMER_EXPLAIN_FLAG=1",
     sprintf("PRIMER_NUM_RETURN=%d",numprimers),
-    "PRIMER_THERMODYNAMIC_PARAMETERS_PATH=/g/steinmetz/velten/Scripts/Primer/primer3-2.3.7/src/primer3_config/",
+    sprintf("PRIMER_THERMODYNAMIC_PARAMETERS_PATH=%s",file.path(primer3_path,"primer3_config/")),
     "=")
 }
 
@@ -305,7 +305,7 @@ getLinesPairs <- function(id_fwd,id_rev,seq_fwd,seq_rev, primerParams) {
     sprintf("PRIMER_OPT_TM=%f",primerParams$Tm[1]),
     sprintf("PRIMER_MIN_TM=%f",primerParams$Tm[2]),
     sprintf("PRIMER_MAX_TM=%f",primerParams$Tm[3]),
-    "PRIMER_THERMODYNAMIC_PARAMETERS_PATH=/g/steinmetz/velten/Scripts/Primer/primer3-2.3.7/src/primer3_config/",
+    sprintf("PRIMER_THERMODYNAMIC_PARAMETERS_PATH=%s",file.path(primer3_path,"primer3_config/")),
     "=")
 }
 
@@ -357,7 +357,7 @@ optimTargets <- function(targets, input, primerParams,mode="inner",verbose=F) {
   cat("Running primer3 for dimer identification...\n")
   
   
-  primer3 <- pipe("/g/software/linux/pack/primer3-2.3.4/bin/primer3_core pass2primer3_chk.io | perl /g/steinmetz/velten/Scripts/Primer/parsePrimerCheck.pl")
+  primer3 <- pipe(sprintf("%s pass2primer3_chk.io | perl %s", primer3_command, file.path(script.basename,"parsePrimerCheck.pl")))
   primer3result <- read.csv(primer3,header = F,sep=",")
   
   #set up a matrix of primer-to-primer interactions
@@ -448,8 +448,7 @@ optimTargetsRT <- function(targets, input, primerParams,verbose=F) {
   
   cat("Running primer3 for dimer identification...\n")
   
-  
-  primer3 <- pipe("/g/software/linux/pack/primer3-2.3.4/bin/primer3_core pass2primer3_chk.io | perl /g/steinmetz/velten/Scripts/Primer/parsePrimerCheck.pl")
+  primer3 <- pipe(sprintf("%s pass2primer3_chk.io | perl %s", primer3_command, file.path(script.basename,"parsePrimerCheck.pl")))
   primer3result <- read.csv(primer3,header = F,sep=",")
   
   #set up a matrix of primer-to-primer interactions

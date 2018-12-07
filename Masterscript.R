@@ -1,6 +1,14 @@
-.libPaths("/g/steinmetz/velten/Software/RPacks3.4.0/")
+#.libPaths("/g/steinmetz/velten/Software/RPacks3.4.0/")
 options(warn=-1)
-library(getopt)
+
+initial.options <- commandArgs(trailingOnly = FALSE)
+file.arg.name <- "--file="
+script.name <- sub(file.arg.name, "", initial.options[grep(file.arg.name, initial.options)])
+script.basename <- dirname(script.name)
+
+source(file.append(script.basename,"check.R"))
+
+
 ###### 1. User input ######
 
 spec = matrix(c(
@@ -30,18 +38,20 @@ spec = matrix(c(
   'verbose','v',0,'logical'
 ), byrow=TRUE, ncol=4)
  opt = getopt(spec)
-
-
+ 
+ 
 if ( !is.null(opt$help) ) {
    cat(getopt(spec, usage=TRUE))
   q(status=1)
 }
+ 
+ 
+ 
 
 
+ 
 #set some reasonable defaults for the options that are needed,
 #but were not specified.
-#/g/steinmetz/project/singcellTxn/AML/2016_12_TargetedscDNASeqTest/PrimerDesign/sample11_targets_extended.txt
-#targets <- readLines("/g/steinmetz/project/singcellTxn/BoneMarrow/10x_analysis_3rdpass/HSPConly/IdealMarkerGenes.txt") #this is mm10
 
 if (is.null(opt$csv)) stop("Please specify an output csv file through --csv")
 
@@ -128,8 +138,8 @@ if (!is.null(opt$lengthRTProduct)) {
   length_outer <- rep(length_rt/margin,2)
 }
 
-source("/g/steinmetz/velten/Scripts/Primer/accessory_functions_TxDb.R")
-source("/g/steinmetz/velten/Scripts/Primer/blast_primers.R")
+source(file.path(script.basename,"accessory_functions_TxDb.R"))
+source(file.path(script.basename,"blast_primers.R"))
 
 suppressMessages({
 library(GenomicRanges)
@@ -143,43 +153,82 @@ cat("Preparing Genomes...\n")
 
 if (genome == "mm10") {
   suppressMessages({
-    library(BSgenome.Mmusculus.UCSC.mm10)
-    library(org.Mm.eg.db)
+    pkgTest("BSgenome.Mmusculus.UCSC.mm10", bc=T)
+    pkgTest("org.Mm.eg.db", bc=T)
   })
   Bsgenome <- BSgenome.Mmusculus.UCSC.mm10
-  TxDb <- import.gff("/g/steinmetz/velten/Scripts/Primer/annotation/Mus_musculus.GRCm38.92.chr.gtf.gz",format="gtf")
+  
+  if(!file.exists(file.path(script.basename,"genomeFiles", "Mus_musculus.GRCm38.92.chr.gtf.gz"))) {
+    cat("This appears to be the first time that you use the mm10 genome.\n")
+    cat("I am downloading the required annotation and sequence files. Please be patient.\n")
+    download.file("http://steinmetzlab.embl.de/shiny/indexplorer/Mus_musculus.GRCm38.92.chr.gtf.gz", destfile = file.path(script.basename,"genomeFiles", "Mus_musculus.GRCm38.92.chr.gtf.gz"))
+    download.file("http://steinmetzlab.embl.de/shiny/indexplorer/Mus_musculus.GRCm38.73.dna.chromosome.all.spikes.fa.gz", destfile = file.path(script.basename,"genomeFiles", "Mus_musculus.GRCm38.73.dna.chromosome.all.spikes.fa.gz"))
+    download.file("http://steinmetzlab.embl.de/shiny/indexplorer/Mus_musculus.GRCm38.cdna.convenient.all.fa.gz", destfile = file.path(script.basename,"genomeFiles", "Mus_musculus.GRCm38.cdna.convenient.all.fa.gz"))
+    cat("Finished downloading, unpacking. Please be patient.\n")
+    gunzip(file.path(script.basename,"genomeFiles", "Mus_musculus.GRCm38.73.dna.chromosome.all.spikes.fa.gz"))
+    gunzip(file.path(script.basename,"genomeFiles", "Mus_musculus.GRCm38.cdna.convenient.all.fa.gz"))
+    cat("Done downloading and unpacking.\n")
+  }
+  
+  TxDb <- import.gff(file.path(script.basename,"genomeFiles", "Mus_musculus.GRCm38.92.chr.gtf.gz"),format="gtf")
   TxDb <- subset(TxDb, transcript_biotype == "protein_coding" & type == "exon") 
   
   org <- org.Mm.eg.db
   
-  genome_fasta <- "/g/steinmetz/genome/Mus_musculus/38.73/fasta/Mus_musculus.GRCm38.73.dna.chromosome.all.spikes.fa"
-  tx_fasta <-"/g/steinmetz/genome/Mus_musculus/38.91/Mus_musculus.GRCm38.cdna.convenient.all.fa"
+  genome_fasta <- file.path(script.basename,"genomeFiles","Mus_musculus.GRCm38.73.dna.chromosome.all.spikes.fa")
+  tx_fasta <- file.path(script.basename,"genomeFiles","Mus_musculus.GRCm38.cdna.convenient.all.fa")
+  
 } else if (genome == "hg19") {
   suppressMessages({
-  library(BSgenome.Hsapiens.UCSC.hg19)
-  library(org.Hs.eg.db)
+  pkgTest("BSgenome.Hsapiens.UCSC.hg19", bc =T)
+  pkgTest("org.Hs.eg.db", bc =T)
   })
-    
   Bsgenome <- BSgenome.Hsapiens.UCSC.hg19
-  TxDb <- import.gff("/g/steinmetz/velten/Scripts/Primer/annotation/Homo_sapiens.GRCh37.87.chr.gtf.gz",format="gtf")
+  
+  if(!file.exists(file.path(script.basename,"genomeFiles", "Homo_sapiens.GRCh37.87.chr.gtf.gz"))) {
+    cat("This appears to be the first time that you use the hg19 genome.\n")
+    cat("I am downloading the required annotation and sequence files. Please be patient.\n")
+    download.file("http://steinmetzlab.embl.de/shiny/indexplorer/Homo_sapiens.GRCh37.87.chr.gtf.gz", destfile = file.path(script.basename,"genomeFiles", "Homo_sapiens.GRCh37.87.chr.gtf.gz"))
+    download.file("http://steinmetzlab.embl.de/shiny/indexplorer/Homo_sapiens.GRCh37.68.dna.chromosomes.withERCC.fa.gz", destfile = file.path(script.basename,"genomeFiles", "Homo_sapiens.GRCh37.68.dna.chromosomes.withERCC.fa.gz"))
+    download.file("http://steinmetzlab.embl.de/shiny/indexplorer/Human_ERCC_combined.convenient.fa.gz", destfile = file.path(script.basename,"genomeFiles", "Human_ERCC_combined.convenient.fa.gz"))
+    cat("Finished downloading, unpacking. Please be patient.\n")
+    gunzip(file.path(script.basename,"genomeFiles", "Homo_sapiens.GRCh37.68.dna.chromosomes.withERCC.fa.gz"))
+    gunzip(file.path(script.basename,"genomeFiles", "Human_ERCC_combined.convenient.fa.gz"))
+    cat("Done downloading and unpacking.\n")
+  }
+  
+  TxDb <- import.gff(file.path(script.basename,"genomeFiles", "Homo_sapiens.GRCh37.87.chr.gtf.gz"),format="gtf")
   TxDb <- subset(TxDb, transcript_biotype == "protein_coding" & type == "exon") 
   org <- org.Hs.eg.db
   
-  genome_fasta <- "/g/steinmetz/genome/Homo_sapiens/37.68/fasta/DNA/Homo_sapiens.GRCh37.68.dna.chromosomes.withERCC.fa"
-  tx_fasta <-"/g/steinmetz/genome/Homo_sapiens/38.79_tx/fasta/Human_ERCC_combined.convenient.fa"
+  genome_fasta <- file.path(script.basename,"genomeFiles", "Homo_sapiens.GRCh37.68.dna.chromosomes.withERCC.fa")
+  tx_fasta <- file.path(script.basename,"genomeFiles", "Human_ERCC_combined.convenient.fa")
 } else  if (genome == "hg38") {
   suppressMessages({
-  library(BSgenome.Hsapiens.UCSC.hg38)
-  library(org.Hs.eg.db)
+    pkgTest("BSgenome.Hsapiens.UCSC.hg38", bc=T)
+    pkgTest("org.Hs.eg.db", bc=T)
   })
   
-  TxDb <- import.gff("/g/steinmetz/project/singcellTxn/CRISPRdrop/hg38_annotation/Homo_sapiens.GRCh38.89.chr.protein-coding.exon.gtf.gz",format="gtf")
+  if(!file.exists(file.path(script.basename,"genomeFiles", "Homo_sapiens.GRCh38.89.chr.protein-coding.exon.gtf.gz"))) {
+    cat("This appears to be the first time that you use the hg38 genome.\n")
+    cat("I am downloading the required annotation and sequence files. Please be patient.\n")
+    download.file("http://steinmetzlab.embl.de/shiny/indexplorer/Homo_sapiens.GRCh38.89.chr.protein-coding.exon.gtf.gz", destfile = file.path(script.basename,"genomeFiles", "Homo_sapiens.GRCh38.89.chr.protein-coding.exon.gtf.gz"))
+    download.file("http://steinmetzlab.embl.de/shiny/indexplorer/hg38_ucsc.fasta.gz", destfile = file.path(script.basename,"genomeFiles", "hg38_ucsc.fasta.gz"))
+    download.file("http://steinmetzlab.embl.de/shiny/indexplorer/Human_ERCC_combined.convenient.fa.gz", destfile = file.path(script.basename,"genomeFiles", "Human_ERCC_combined.convenient.fa.gz"))
+    cat("Finished downloading, unpacking. Please be patient.\n")
+    gunzip(file.path(script.basename,"genomeFiles", "hg38_ucsc.fasta.gz"))
+    gunzip(file.path(script.basename,"genomeFiles", "Human_ERCC_combined.convenient.fa.gz"))
+    cat("Done downloading and unpacking.\n")
+  }
+  
+  TxDb <- import.gff(file.path(script.basename,"genomeFiles", "Homo_sapiens.GRCh38.89.chr.protein-coding.exon.gtf.gz"),format="gtf")
   TxDb <- subset(TxDb, transcript_biotype == "protein_coding" & type == "exon") 
   Bsgenome <- BSgenome.Hsapiens.UCSC.hg38
   org <- org.Hs.eg.db
   
-  genome_fasta <- "/g/steinmetz/genome/Homo_sapiens/GRCh38/fasta/GRCh38.primary_assembly.genome.ERCC.fa"
-  tx_fasta <-"/g/steinmetz/genome/Homo_sapiens/38.79_tx/fasta/Human_ERCC_combined.convenient.fa"
+  genome_fasta <- file.path(script.basename,"genomeFiles", "hg38_ucsc.fasta")
+  tx_fasta <-file.path(script.basename,"genomeFiles", "Human_ERCC_combined.convenient.fa.gz")
+  
 } else stop("Genome needs to be one of hg19, hg38 or mm10")
 
 seqlevels(TxDb) <- paste0("chr",seqlevels(TxDb))
@@ -256,7 +305,7 @@ if (nested != "RTonly") {
   
   lines <- unlist(lapply(targets, getLines, numprimers = numprimers, range = length_inner, primerParams = params_inner))
   writeLines(lines, "pass2primer3.io")
-  primer3 <- pipe("/g/software/linux/pack/primer3-2.3.4/bin/primer3_core pass2primer3.io | perl /g/steinmetz/velten/Scripts/Primer/parsePrimers.pl")
+  primer3 <- pipe("%s pass2primer3.io | perl %s")
   primer3result <- readLines(primer3)
   close(primer3)
   
@@ -323,7 +372,7 @@ if (nested == "RT" | nested == "RTonly") {
     lines <- unlist(lapply(targets, getLinesRT, numprimers = numprimers, range = length_outer, primerParams = params_outer))
     
     writeLines(lines, "pass2primer3.io")
-    primer3 <- pipe("/g/software/linux/pack/primer3-2.3.4/bin/primer3_core pass2primer3.io | perl /g/steinmetz/velten/Scripts/Primer/parsePrimers.pl")
+    primer3 <- pipe(sprintf("%s pass2primer3.io | perl %s", file.path(primer3_path, "primer3_core"), file.path(script.basename,"parsePrimers.pl")))
     primer3result <- readLines(primer3)
     close(primer3)
     
@@ -364,7 +413,7 @@ if (nested == "full") {
   
   lines <- unlist(lapply(targets, getLinesOuter, numprimers = numprimers, range = length_outer, primerParams = params_outer))
   writeLines(lines, "pass2primer3.io")
-  primer3 <- pipe("/g/software/linux/pack/primer3-2.3.4/bin/primer3_core pass2primer3.io | perl /g/steinmetz/velten/Scripts/Primer/parsePrimers.pl")
+  primer3 <- pipe(sprintf("%s pass2primer3.io | perl %s", file.path(primer3_path, "primer3_core"), file.path(script.basename,"parsePrimers.pl")))
   primer3result <- readLines(primer3)
   close(primer3)
   
