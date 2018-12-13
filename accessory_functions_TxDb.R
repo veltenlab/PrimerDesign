@@ -357,7 +357,7 @@ optimTargets <- function(targets, input, primerParams,mode="inner",verbose=F) {
   cat("Running primer3 for dimer identification...\n")
   
   
-  primer3 <- pipe(sprintf("%s pass2primer3_chk.io | perl %s", primer3_command, file.path(script.basename,"parsePrimerCheck.pl")))
+  primer3 <- pipe(sprintf("%s pass2primer3_chk.io | perl %s", file.path(primer3_path, "primer3_core"), file.path(script.basename,"parsePrimerCheck.pl")))
   primer3result <- read.csv(primer3,header = F,sep=",")
   
   #set up a matrix of primer-to-primer interactions
@@ -448,7 +448,7 @@ optimTargetsRT <- function(targets, input, primerParams,verbose=F) {
   
   cat("Running primer3 for dimer identification...\n")
   
-  primer3 <- pipe(sprintf("%s pass2primer3_chk.io | perl %s", primer3_command, file.path(script.basename,"parsePrimerCheck.pl")))
+  primer3 <- pipe(sprintf("%s pass2primer3_chk.io | perl %s", file.path(primer3_path, "primer3_core"), file.path(script.basename,"parsePrimerCheck.pl")))
   primer3result <- read.csv(primer3,header = F,sep=",")
   
   #set up a matrix of primer-to-primer interactions

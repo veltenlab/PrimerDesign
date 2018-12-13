@@ -1,4 +1,4 @@
-#.libPaths("/g/steinmetz/velten/Software/RPacks3.4.0/")
+.libPaths("/g/steinmetz/velten/Software/RPacks3.4.0/")
 options(warn=-1)
 
 initial.options <- commandArgs(trailingOnly = FALSE)
@@ -6,7 +6,7 @@ file.arg.name <- "--file="
 script.name <- sub(file.arg.name, "", initial.options[grep(file.arg.name, initial.options)])
 script.basename <- dirname(script.name)
 
-source(file.append(script.basename,"check.R"))
+source(file.path(script.basename,"check.R"))
 
 
 ###### 1. User input ######
@@ -242,6 +242,7 @@ if (input == "cDNA") {
   if (!is.null(opt$txdb)) {
     blastdb_tx <- opt$txdb
   } else if (blast) {
+    cat("Preparing transcriptome blast DB...\n")
     blastdb_tx <- make_blast_db(tx_fasta)
     cat("Created transcriptome blastdb for",genome,":",blastdb_tx,"\n")
   }
@@ -252,6 +253,7 @@ if (!is.null(opt$genomedb)) {
   blastdb_genome <- opt$genomedb
 } else {
   blastdb_genome <- make_blast_db(genome_fasta)
+  cat("Preparing genome blast DB...\n")
   cat("Created genome blastdb for",genome,":",blastdb_genome,"\n")
 }
 
@@ -305,7 +307,7 @@ if (nested != "RTonly") {
   
   lines <- unlist(lapply(targets, getLines, numprimers = numprimers, range = length_inner, primerParams = params_inner))
   writeLines(lines, "pass2primer3.io")
-  primer3 <- pipe("%s pass2primer3.io | perl %s")
+  primer3 <- pipe(sprintf("%s pass2primer3.io | perl %s", file.path(primer3_path, "primer3_core"), file.path(script.basename,"parsePrimers.pl")))
   primer3result <- readLines(primer3)
   close(primer3)
   
