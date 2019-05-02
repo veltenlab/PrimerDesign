@@ -158,15 +158,16 @@ evaluate_blast_primers_RT <- function(targets, blastdb,target = "tx", verbose =F
 
 
 
-final_blast_primers <- function(output,field, blastdb) {
+final_blast_primers <- function(output,field, blastdb, removeprefix = "") {
   colors = c("left_inner" = "175,0,0",
              "right_inner" = "0,175,0",
              "right_outer" = "0,0,200",
              "left_outer" = "255,0,0")
   #blast each set of of primers
-    blasted <- blast_primers(output[,field], blastdb)
+  toblast <- gsub(paste("^",removeprefix,sep=""),"", output[,field])
+    blasted <- blast_primers(toblast, blastdb)
     blasted <- split(blasted, blasted$V1)
-    blasted <- lapply(blasted,function(x) subset(x, V4 > nchar(output[as.integer(gsub("Query_","",V1)),field]) - 2  ))
+    blasted <- lapply(blasted,function(x) subset(x, V4 > nchar(toblast[as.integer(gsub("Query_","",V1))]) - 2  ))
     blasted <- lapply(blasted,function(x) {
       x$id <- output$id[as.integer(gsub("Query_","",x$V1))]
       x

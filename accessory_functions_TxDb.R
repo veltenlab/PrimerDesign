@@ -507,3 +507,117 @@ optimTargetsRT <- function(targets, input, primerParams,verbose=F) {
   }
   targets
 }
+
+#identify if left or right primer are closer, add prefixes
+addprefixes <- function(target, firstreadprefix, secondreadprefix, readlength) {
+  
+  #get position of all left primers
+  leftdist <- abs(target$pos - sapply(target$left, function(x) nchar(strsplit(target$seq,x)[[1]][1])))
+  rightdist <- abs(target$pos - sapply(as.character(reverseComplement(DNAStringSet(target$right))), function(x) nchar(strsplit(target$seq,x)[[1]][1])))
+  isleft <- mapply(function(x,y) x < y, leftdist, rightdist)
+  newleft <- ifelse(isleft, target$left, target$right)
+  newright <- ifelse(isleft, target$right, target$left)
+  target$left <- paste(firstreadprefix, newleft, sep="")
+  target$right <- paste(secondreadprefix,newright, sep="")
+  target
+}
+
+
+
+optimTargets2 <- function(targets, input, primerParams,mode="inner",verbose=F) {
+  left <- ifelse(mode == "inner","left","left_outer")
+  right <- ifelse(mode == "inner","right","right_outer")
+  #could add blasting step here
+  
+  targets <- targets[sapply(targets, function(x) length(x[[left]])) > 0]
+  #create a named list of all left and right primers
+  allleft <- unlist(lapply(targets, function(x) {
+    out <- x[[left]];
+    names(out) <- paste(x$id, 1:length(out), sep="_")
+    out
+  }))
+  allright <-  unlist(lapply(targets, function(x) {
+    out <- x[[right]];
+    names(out) <- paste(x$id, 1:length(out), sep="_")
+    out
+  }))
+  
+ 
+  #set up a matrix of primer-to-primer interactions
+  cat("Setting up matrix of primer-to-primer interactions...\n")
+  any <- sapply(allleft, function(s1) {
+    sapply(allright, function(s2) ewrapper(s1,s2))
+  })
+
+  protected <- rep(F, nrow(any))
+  counter <- 1
+  while (nrow(any) > length(targets)){
+    cat("Eliminating primer... (round", counter,")\n")
+    counter <- counter+1
+    maxi <- max(any)
+    maxis_left <- apply(any[!protected,!protected],1,function(x) sum(x == maxi))
+    maxis_right <- apply(any[!protected,!protected],2,function(x) sum(x == maxi))
+    #if (sum(maxis_left) == 0) break;
+    which_maxi_left <- which.max(maxis_left)
+    which_maxi_right <- which.max(maxis_right)
+    
+    total_left <- sum(any[!protected,!protected][which_maxi_left,])
+    total_right <- sum(any[!protected,!protected][,which_maxi_right])
+    
+    
+    
+    if (total_left > total_right) {
+      any <- any[rownames(any) !=  names(which_maxi_left) , colnames(any) !=  names(which_maxi_left)]
+      if (verbose) cat("Discarding primer pair", names(which_maxi_left) , "\n")
+    } else  {
+      any <- any[rownames(any) !=  names(which_maxi_right) , colnames(any) !=  names(which_maxi_right)]
+      if (verbose) cat("Discarding primer pair", names(which_maxi_right) , "\n")
+    }
+    
+    #test if only a single pair is left for a given target
+    t <- sapply(strsplit(rownames(any), ".", fixed = T),"[",1)
+    arrived<-names(table(t))[table(t) == 1]
+    protected <- t%in%arrived
+    
+  }
+  
+  cat("optimization stats:\n")
+  cat("Max: ", max(any),"\n")
+  cat("NMax: ", sum(any == max(any)),"\n")
+  
+  #now, for each target, take the primer pairs with the minimal interaction score
+  u <- c()
+  for (target in unique(t)) {
+    consider <- which(t == target) 
+    if (length(consider) == 1) {
+      if (verbose) print(rownames(any)[consider])
+      u <- c(u,rownames(any)[consider])
+      targets[[target]][[left]] <- allleft[rownames(any)[consider]]
+      targets[[target]][[right]] <- allright[rownames(any)[consider]]
+    } else {
+      use <- which.min(apply(any[consider,],1,sum))
+      if (verbose) print(rownames(any)[consider][use])
+      u <- c(u,rownames(any)[consider][use])
+      targets[[target]][[left]] <- allleft[rownames(any)[consider][use]]
+      targets[[target]][[right]] <- allright[rownames(any)[consider][use]]
+    }
+  }
+  targets
+}
+
+
+ewrapper <- function(s1,s2,nrange = 1:10) {
+  a <- endmatches(s1,s2,nrange)
+  b <- endmatches(s2,s1,nrange)
+  max(c(a,b))
+}
+
+endmatches <- function(s1, s2, nrange = 1:10) {
+  
+  s1 <- as.character(reverseComplement(DNAString(s1)))
+for (n in rev(nrange)) {
+  bait <- substr(s1, 1, n)
+  if (grepl(bait, s2)) break;
+}   
+  n
+}

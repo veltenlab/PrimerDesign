@@ -28,10 +28,12 @@ spec = matrix(c(
   'TmOuter',"T",1,"character",
   'TmInner',"S",1,"character",
   'nCharOuter',"B",1,"character",
-  'nCharInner',"D",1,"character",
-  'prefixInner',"p",1,"character",
+  'nCharInner',"D",1,"character",#  'prefixInner',"p",1,"character",
+  'prefixInnerLeft',"l",1,"character",
+  'prefixInnerRight',"r",1,"character",
   "prefixOuter","P",1,"character",
   'numprimers',"N",1,"integer",
+  'readlength','L',1,"integer",
   'csv','o',1,"character",
   'bed','b',1,"character",
   'help','h',0,"logical",
@@ -137,6 +139,12 @@ if (!is.null(opt$lengthRTProduct)) {
   length_rt <- margin * max(length_inner)
   length_outer <- rep(length_rt/margin,2)
 }
+
+if(is.null(opt$prefixInnerLeft)) prefixInnerLeft <- "" else prefixInnerLeft <- opt$prefixInnerLeft
+if(is.null(opt$prefixInnerRight)) prefixInnerRight <- "" else prefixInnerRight <- opt$prefixInnerRight
+if (prefixInnerLeft != "" | prefixInnerRight != "") cat("Prepending", prefixInnerLeft, "to the primer that is CLOSER to the mutation\n")
+
+
 
 source(file.path(script.basename,"accessory_functions_TxDb.R"))
 source(file.path(script.basename,"blast_primers.R"))
@@ -329,10 +337,20 @@ if (nested != "RTonly") {
     })
   }
   
+  #identify for each primer pair if the left or right primer is with x bases of the mutation
+  #add adapters for optimization run
+  if (!is.null(opt$readlength)) {
+    cat("Assuring that the first read / left primer is no more than", opt$readlength, "bases from the mutation\n")
+    targets <- lapply(targets,addprefixes,firstreadprefix = prefixInnerLeft, secondreadprefix=prefixInnerRight, readlength = opt$readlength)
+  }
+
+  
+  # save(targets, input, params_inner, file = "state.rda")
+  # stop()
   if (optim) {
     cat("Finding ideal primer pairs (inner PCR):\n")
     cat("Checking", sum(sapply(targets,function(x) length(x$left)))*sum(sapply(targets,function(x) length(x$right))) , "possible combinations of primers for potential to form dimers, this may take a while. To speed up, decrease numprimers or switch off optimization")
-    targets <- optimTargets(targets, input, primerParams = params_inner,verbose=verbose)  
+    targets <- optimTargets2(targets, input, primerParams = params_inner,verbose=verbose)  
     cat("Done...\n")
   } else {
     targets <- lapply(targets, function(x) {
@@ -480,17 +498,20 @@ output <- data.frame(
 #for output: blast all primers again, to define their genomic position and create a bed file.
 
 if (!is.null(opt$bed)) {
+  cat("Blasting final set of primners\n")
+  # save.image("state3.rda")
+  # stop("Saved")
   header <- "track name=\"PrimerDesign\" description=\"Primer Design\" visibility=2 itemRgb=\"On\""
   file.remove(opt$bed)
   writeLines(header,con=opt$bed)
   
   if(!all(is.na(output$left_inner))) {
-    bed_left_inner <- final_blast_primers(output, "left_inner",blastdb_genome)
+    bed_left_inner <- final_blast_primers(output, "left_inner",blastdb_genome, prefixInnerLeft)
     write.table(bed_left_inner, file=opt$bed, quote=F,sep="\t",col.names = F, row.names=F,append=T)
     
   }
   if(!all(is.na(output$right_inner))) {
-    bed_right_inner <- final_blast_primers(output, "right_inner",blastdb_genome)
+    bed_right_inner <- final_blast_primers(output, "right_inner",blastdb_genome, prefixInnerRight)
     write.table(bed_right_inner, file=opt$bed, quote=F,sep="\t",col.names = F, row.names=F,append=T)
     
   }
