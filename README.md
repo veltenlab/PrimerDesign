@@ -23,7 +23,7 @@ Example: You are looking at some cancer mutations and want to increase coverage.
 
 ```
 Rscript Masterscript.R --coordinates coordinates.txt --cDNA --genome hg19 \
---nested none --csv targeted_MutaSeq_primers.csv --bed targeted_MutaSeq_primers.bed --blast --optim
+--readlength 75  --nested none --csv targeted_MutaSeq_primers.csv --bed targeted_MutaSeq_primers.bed --blast --optim
 
 ```
 
@@ -33,7 +33,7 @@ Genomic coordinates can be on gDNA (e.g. when amplifying material from genomic D
 
 ```
 Rscript Masterscript.R --coordinates coordinates.txt --gDNA --genome hg19 \
---nested full --csv targeted_nested_primers.csv --bed targeted_nested_primers.bed --blast --optim
+--readlength 75 --nested full --csv targeted_nested_primers.csv --bed targeted_nested_primers.bed --blast --optim
 
 ```
 
@@ -50,7 +50,7 @@ Usage example (see below for all options)
 
 ```
 Rscript Masterscript.R --geneSymbols Markergenes.txt --cDNA --genome mm10 \
---nested RTonly --lengthRTProduct 300 --csv targeted_rt_primers.csv --bed targeted_rt_primers.bed --readlength 75 --blast --optim 
+--nested RTonly --lengthRTProduct 300 --csv targeted_rt_primers.csv --bed targeted_rt_primers.bed --blast --optim 
 ```
 
 Alternatively, --nested RT will additionally design PCR primers.
