@@ -313,6 +313,7 @@ getLinesPairs <- function(id_fwd,id_rev,seq_fwd,seq_rev, primerParams) {
 optimTargets <- function(targets, input, primerParams,mode="inner",verbose=F) {
  left <- ifelse(mode == "inner","left","left_outer")
  right <- ifelse(mode == "inner","right","right_outer")
+ 
   #could add blasting step here
   
   targets <- targets[sapply(targets, function(x) length(x[[left]])) > 0]
@@ -327,6 +328,10 @@ optimTargets <- function(targets, input, primerParams,mode="inner",verbose=F) {
     names(out) <- paste(x$id, 1:length(out), sep="_")
     out
   }))
+  
+  # allleft <- gsub("TCGTCGGCAGCGTCAGATGTGTATAAGAGACAG|GTCTCGTGGGCTCGGAGATGTGTATAAGAGACAG","",allleft )
+  # allright <- gsub("TCGTCGGCAGCGTCAGATGTGTATAAGAGACAG|GTCTCGTGGGCTCGGAGATGTGTATAAGAGACAG","",allright )
+  # 
   
   #Check that no left primer is the reverse complement of a right primer!
   require(Biostrings)
@@ -398,6 +403,10 @@ optimTargets <- function(targets, input, primerParams,mode="inner",verbose=F) {
     protected <- t%in%arrived
     
   }
+  
+  
+  cat("After optimization, max PRIMER_PAIR_0_COMPL_ANY_TH between primers is", max(any), ".\n")
+  cat("In case >20: Rerun with a higher numprimers\n")
   
   #now, for each target, take the primer pairs with the minimal interaction score
   u <- c()
@@ -606,9 +615,13 @@ optimTargets2 <- function(targets, input, primerParams,mode="inner",verbose=F) {
 }
 
 
-ewrapper <- function(s1,s2,nrange = 1:10) {
-  a <- endmatches(s1,s2,nrange)
-  b <- endmatches(s2,s1,nrange)
+ewrapper <- function(s1,s2,nrange = 1:10, cutrange = 1:4) {
+  a <- endmatches(s1,s2,nrange) #exactly at the end
+  b <- endmatches(s2,s1,nrange) 
+  for (j in cutrange) {
+    a <- c(a, endmatches(gsub(sprintf(".{%d}$",j),"",s1),s2,nrange))
+    b <- c(b, endmatches(gsub(sprintf(".{%d}$",j),"",s2),s1,nrange))
+  }
   max(c(a,b))
 }
 
