@@ -50,7 +50,7 @@ Usage example (see below for all options)
 
 ```
 Rscript Masterscript.R --geneSymbols Markergenes.txt --cDNA --genome mm10 \
---nested RTonly --lengthRTProduct 300 --csv targeted_rt_primers.csv --bed targeted_rt_primers.bed --blast --optim 
+--nested RTonly --lengthRTProduct 300 --csv targeted_rt_primers.csv --bed targeted_rt_primers.bed --readlength 75 --blast --optim 
 ```
 
 Alternatively, --nested RT will additionally design PCR primers.
@@ -72,6 +72,7 @@ Alternatively, --nested RT will additionally design PCR primers.
 | --blast | none | Blast all primer candidates to select candidates that do not form byproduct from. Note that final primers will always be blasted aganst the genome if bed output is desired |
 | --genomedb | none | Path to Blast database for genome. If left out, will be created if needed|
 | --txdb | none | Path to Blast database for transcriptome. If left out, will be created if needed|
+| --readlength | int | Length of the first sequencing read to ensure mutation is covered |
 | --lengthInnerProduct | int,int | Length of inner PCR product (min, max) |
 | --lengthOuterProduct | int,int | Length of outer PCR product (min, max) |
 | --lengthRTProduct | int | Minimum length of RT product (if possible) |
