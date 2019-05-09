@@ -373,74 +373,94 @@ optimTargets <- function(targets, input, primerParams,mode="inner",verbose=F) {
   #iteritavely
   #throw out the primer pair with the worst performance
   
-  #v2: Use the Bron-Kerbosch algorithm
-  #set up a graph - multipartite, i.e. no 2 primers from the same level are connected to each other.
-  # adj <- any < 15 & end < 15
-  # classes.row <- gsub("_\\d+$","",rownames(adj))
-  # classes.col <- gsub("_\\d+$","",colnames(adj))
-  # for (cl in unique(classes.row)) adj[classes.row == cl, classes.col==cl] <- F
-  # primerGraph <- graph_from_adjacency_matrix(adj)
   # optimal_set <- largest_cliques(primerGraph)
   substrings <- sapply(allleft, function(s1) {
     sapply(allright, function(s2) ewrapper(s1,s2))
   })
   
   any <- any + as.numeric(substrings >= 5) * 30
-  
-  
-  protected <- rep(F, nrow(any))
-  counter <- 1
-  while (nrow(any) > length(targets)){
-    cat("Eliminating primer... (round", counter,")\n")
-    counter <- counter+1
-    maxis_left <- apply(any[!protected,!protected],1,max)
-    maxis_right <- apply(any[!protected,!protected],2,max)
-    if (sum(maxis_left) == 0) break;
-    which_maxi_left <- which.max(maxis_left)
-    which_maxi_right <- which.max(maxis_right)
-    
-    total_left <- sum(any[!protected,!protected][which_maxi_left,])
-    total_right <- sum(any[!protected,!protected][,which_maxi_right])
-    
-    
-    
-    if (total_left > total_right) {
-      any <- any[rownames(any) !=  names(which_maxi_left) , colnames(any) !=  names(which_maxi_left)]
-      if (verbose) cat("Discarding primer pair", names(which_maxi_left) , "\n")
-    } else  {
-      any <- any[rownames(any) !=  names(which_maxi_right) , colnames(any) !=  names(which_maxi_right)]
-      if (verbose) cat("Discarding primer pair", names(which_maxi_right) , "\n")
-    }
-    
-    #test if only a single pair is left for a given target
-    t <- sapply(strsplit(rownames(any), ".", fixed = T),"[",1)
-    arrived<-names(table(t))[table(t) == 1]
-    protected <- t%in%arrived
-    
+  #v2: Use cliquer
+  #set up a graph - multipartite, i.e. no 2 primers from the same level are connected to each other.
+  adj <- (any < 15 & end < 15) & (t(any) < 15 & t(end) < 15)
+  classes.row <- gsub("_\\d+$","",rownames(adj))
+  classes.col <- gsub("_\\d+$","",colnames(adj))
+  for (cl in unique(classes.row)) adj[classes.row == cl, classes.col==cl] <- F
+  primerGraph <- graph_from_adjacency_matrix(adj)
+  #write_graph(primerGraph, file = "primergraph.dimacs", format = "dimacs", capacity = edge.attributes(primerGraph)$weight)
+  write_graph(primerGraph, file = "primergraph.dimacs", format = "dimacs", capacity = rep(1, ecount(primerGraph)))
+  system("perl -pe 's/^n.+\\n//; s/^a (\\d+ \\d+) \\d+/e $1/;' -i primergraph.dimacs")
+  clique <- system("/g/steinmetz/velten/Software/cliquer-1.21/cl -x -u primergraph.dimacs", intern = T)
+  parsed <- as.integer(strsplit(clique,"[ a-z=,:]+")[[1]])
+  size <- parsed[2]
+  weight <- parsed[3]
+  include <- V(primerGraph)[parsed[4:length(parsed)]]
+  targets.included <- gsub("\\.[^\\.]+","",names(include))
+  if (size < length(targets)) {
+    cat("The optimal solution does NOT include all targets. Consider Rerunning with higher numprimers\n")
+    cat("Only the following are included\n")
+    print(targets.included)
   }
   
-  
-  cat("After optimization, max PRIMER_PAIR_0_COMPL_ANY_TH between primers is", max(any), ".\n")
-  cat("In case >20: Rerun with a higher numprimers\n")
-  
-  #now, for each target, take the primer pairs with the minimal interaction score
-  u <- c()
-  for (target in unique(t)) {
-    consider <- which(t == target) 
-    if (length(consider) == 1) {
-      if (verbose) print(rownames(any)[consider])
-      u <- c(u,rownames(any)[consider])
-      targets[[target]][[left]] <- allleft[rownames(any)[consider]]
-      targets[[target]][[right]] <- allright[rownames(any)[consider]]
-    } else {
-      use <- which.min(apply(any[consider,],1,sum))
-      if (verbose) print(rownames(any)[consider][use])
-      u <- c(u,rownames(any)[consider][use])
-      targets[[target]][[left]] <- allleft[rownames(any)[consider][use]]
-      targets[[target]][[right]] <- allright[rownames(any)[consider][use]]
-    }
+  targets <- targets[targets.included]
+  for (i in 1:length(include)) {
+    targets[[targets.included[i]]][[left]] <- allleft[names(include)[i]]
+    targets[[targets.included[i]]][[right]] <- allright[names(include)[i]]
   }
-  targets
+
+  
+  # protected <- rep(F, nrow(any))
+  # counter <- 1
+  # while (nrow(any) > length(targets)){
+  #   cat("Eliminating primer... (round", counter,")\n")
+  #   counter <- counter+1
+  #   maxis_left <- apply(any[!protected,!protected],1,max)
+  #   maxis_right <- apply(any[!protected,!protected],2,max)
+  #   if (sum(maxis_left) == 0) break;
+  #   which_maxi_left <- which.max(maxis_left)
+  #   which_maxi_right <- which.max(maxis_right)
+  #   
+  #   total_left <- sum(any[!protected,!protected][which_maxi_left,])
+  #   total_right <- sum(any[!protected,!protected][,which_maxi_right])
+  #   
+  #   
+  #   
+  #   if (total_left > total_right) {
+  #     any <- any[rownames(any) !=  names(which_maxi_left) , colnames(any) !=  names(which_maxi_left)]
+  #     if (verbose) cat("Discarding primer pair", names(which_maxi_left) , "\n")
+  #   } else  {
+  #     any <- any[rownames(any) !=  names(which_maxi_right) , colnames(any) !=  names(which_maxi_right)]
+  #     if (verbose) cat("Discarding primer pair", names(which_maxi_right) , "\n")
+  #   }
+  #   
+  #   #test if only a single pair is left for a given target
+  #   t <- sapply(strsplit(rownames(any), ".", fixed = T),"[",1)
+  #   arrived<-names(table(t))[table(t) == 1]
+  #   protected <- t%in%arrived
+  #   
+  # }
+  # 
+  # 
+  # cat("After optimization, max PRIMER_PAIR_0_COMPL_ANY_TH between primers is", max(any), ".\n")
+  # cat("In case >20: Rerun with a higher numprimers\n")
+  
+  # #now, for each target, take the primer pairs with the minimal interaction score
+  # u <- c()
+  # for (target in unique(t)) {
+  #   consider <- which(t == target) 
+  #   if (length(consider) == 1) {
+  #     if (verbose) print(rownames(any)[consider])
+  #     u <- c(u,rownames(any)[consider])
+  #     targets[[target]][[left]] <- allleft[rownames(any)[consider]]
+  #     targets[[target]][[right]] <- allright[rownames(any)[consider]]
+  #   } else {
+  #     use <- which.min(apply(any[consider,],1,sum))
+  #     if (verbose) print(rownames(any)[consider][use])
+  #     u <- c(u,rownames(any)[consider][use])
+  #     targets[[target]][[left]] <- allleft[rownames(any)[consider][use]]
+  #     targets[[target]][[right]] <- allright[rownames(any)[consider][use]]
+  #   }
+  # }
+  # targets
 }
 
 
