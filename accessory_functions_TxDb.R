@@ -373,6 +373,21 @@ optimTargets <- function(targets, input, primerParams,mode="inner",verbose=F) {
   #iteritavely
   #throw out the primer pair with the worst performance
   
+  #v2: Use the Bron-Kerbosch algorithm
+  #set up a graph - multipartite, i.e. no 2 primers from the same level are connected to each other.
+  # adj <- any < 15 & end < 15
+  # classes.row <- gsub("_\\d+$","",rownames(adj))
+  # classes.col <- gsub("_\\d+$","",colnames(adj))
+  # for (cl in unique(classes.row)) adj[classes.row == cl, classes.col==cl] <- F
+  # primerGraph <- graph_from_adjacency_matrix(adj)
+  # optimal_set <- largest_cliques(primerGraph)
+  substrings <- sapply(allleft, function(s1) {
+    sapply(allright, function(s2) ewrapper(s1,s2))
+  })
+  
+  any <- any + as.numeric(substrings >= 6) * 20
+  
+  
   protected <- rep(F, nrow(any))
   counter <- 1
   while (nrow(any) > length(targets)){
@@ -618,10 +633,10 @@ optimTargets2 <- function(targets, input, primerParams,mode="inner",verbose=F) {
 ewrapper <- function(s1,s2,nrange = 1:10, cutrange = 1:4) {
   a <- endmatches(s1,s2,nrange) #exactly at the end
   b <- endmatches(s2,s1,nrange) 
-  for (j in cutrange) {
-    a <- c(a, endmatches(gsub(sprintf(".{%d}$",j),"",s1),s2,nrange))
-    b <- c(b, endmatches(gsub(sprintf(".{%d}$",j),"",s2),s1,nrange))
-  }
+  # for (j in cutrange) {
+  #   a <- c(a, endmatches(gsub(sprintf(".{%d}$",j),"",s1),s2,nrange))
+  #   b <- c(b, endmatches(gsub(sprintf(".{%d}$",j),"",s2),s1,nrange))
+  # }
   max(c(a,b))
 }
 
