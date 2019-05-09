@@ -385,7 +385,7 @@ optimTargets <- function(targets, input, primerParams,mode="inner",verbose=F) {
     sapply(allright, function(s2) ewrapper(s1,s2))
   })
   
-  any <- any + as.numeric(substrings >= 6) * 20
+  any <- any + as.numeric(substrings >= 6) * 30
   
   
   protected <- rep(F, nrow(any))
