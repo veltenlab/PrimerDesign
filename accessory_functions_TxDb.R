@@ -406,7 +406,7 @@ optimTargets <- function(targets, input, primerParams,mode="inner",verbose=F) {
     targets[[targets.included[i]]][[left]] <- allleft[names(include)[i]]
     targets[[targets.included[i]]][[right]] <- allright[names(include)[i]]
   }
-
+  targets
   
   # protected <- rep(F, nrow(any))
   # counter <- 1
