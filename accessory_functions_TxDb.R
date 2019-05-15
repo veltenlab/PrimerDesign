@@ -310,7 +310,7 @@ getLinesPairs <- function(id_fwd,id_rev,seq_fwd,seq_rev, primerParams) {
 }
 
 
-optimTargets <- function(targets, input, primerParams,mode="inner",verbose=F) {
+optimTargets <- function(targets, input, primerParams,mode="inner",verbose=F,firstreadprefix = "", secondreadprefix="", anyThr = 15, anyThrSame = 30) {
  left <- ifelse(mode == "inner","left","left_outer")
  right <- ifelse(mode == "inner","right","right_outer")
  
@@ -318,6 +318,7 @@ optimTargets <- function(targets, input, primerParams,mode="inner",verbose=F) {
   
   targets <- targets[sapply(targets, function(x) length(x[[left]])) > 0]
   #create a named list of all left and right primers
+  if (mode == "outer") {
   allleft <- unlist(lapply(targets, function(x) {
     out <- x[[left]];
     names(out) <- paste(x$id, 1:length(out), sep="_")
@@ -328,6 +329,21 @@ optimTargets <- function(targets, input, primerParams,mode="inner",verbose=F) {
     names(out) <- paste(x$id, 1:length(out), sep="_")
     out
   }))
+  } else {
+    allleft <- unlist(lapply(targets, function(x) {
+      use <- ifelse(x$isleft,"left","right") 
+      out <- sapply(1:length(use), function(i) x[[use[i]]][i])
+      names(out) <- paste(x$id, 1:length(out), sep="_")
+      out
+    }))
+    allright <- unlist(lapply(targets, function(x) {
+      use <- ifelse(!x$isleft,"left","right") 
+      out <- sapply(1:length(use), function(i) x[[use[i]]][i])
+      names(out) <- paste(x$id, 1:length(out), sep="_")
+      out
+    }))
+  }
+
   
   # allleft <- gsub("TCGTCGGCAGCGTCAGATGTGTATAAGAGACAG|GTCTCGTGGGCTCGGAGATGTGTATAAGAGACAG","",allleft )
   # allright <- gsub("TCGTCGGCAGCGTCAGATGTGTATAAGAGACAG|GTCTCGTGGGCTCGGAGATGTGTATAAGAGACAG","",allright )
@@ -346,6 +362,7 @@ optimTargets <- function(targets, input, primerParams,mode="inner",verbose=F) {
   }
   
   #lines <- list()
+  getany <- function(allleft, allright){
   file.remove("pass2primer3_chk.io")
   outwriter <- file("pass2primer3_chk.io", open="a")
   #writeLines(unlist(lines), "pass2primer3_chk.io")
@@ -365,23 +382,35 @@ optimTargets <- function(targets, input, primerParams,mode="inner",verbose=F) {
   primer3 <- pipe(sprintf("%s pass2primer3_chk.io | perl %s", file.path(primer3_path, "primer3_core"), file.path(script.basename,"parsePrimerCheck.pl")))
   primer3result <- read.csv(primer3,header = F,sep=",")
   
-  #set up a matrix of primer-to-primer interactions
+  #set up a matrix of primer-to-primer interactions (left primers with left primers)
   any <- matrix(primer3result$V2, nrow = length(allleft), ncol = length(allright), dimnames = list(names(allleft), names(allright)), byrow = T)
   end <- matrix(primer3result$V3, nrow = length(allleft), ncol = length(allright), dimnames = list(names(allleft), names(allright)), byrow = T)
-  save(any,end,allleft, allright, targets,file="primer3result.rda")
-  #try to identify a vector which selects a) 1 primer pair per target and b) minimizes the outputdim
-  #iteritavely
-  #throw out the primer pair with the worst performance
+  list(any = any, end = end)
+  }
+  leftvsright <- getany(allleft, allright) 
+  leftvsleft <- getany(allleft, allleft)#is this necessary? these byproducts would die out 
+   rightvsright <- getany(allright, allright)#is this necessary?
   
-  # optimal_set <- largest_cliques(primerGraph)
+  save(leftvsright,leftvsleft,rightvsright,allleft, allright, targets,file="primer3result.rda")
+  #check for potential left-left and right-right dimers
+  
+  
+  #check that there are no strong identities also further downstream (necessary?)
+  if (mode == "inner") {
+    na <- names(allleft)
+    allleft <- paste0(firstreadprefix, allleft); names(allleft) <- na
+    allright <- paste0(secondreadprefix, allright); names(allright) <- na
   substrings <- sapply(allleft, function(s1) {
-    sapply(allright, function(s2) ewrapper(s1,s2))
-  })
-  
-  any <- any + as.numeric(substrings >= 5) * 30
+    sapply(allright, function(s2) ewrapper(s1,s2, endmatches.where, n = 6))
+  }) #checks if a subsrtring of length 5 or greater is located anywhere near the end ( the closer to the end the higher the score)
+
+  }
   #v2: Use cliquer
   #set up a graph - multipartite, i.e. no 2 primers from the same level are connected to each other.
-  adj <- (any < 15 & end < 15) & (t(any) < 15 & t(end) < 15)
+  adj <- (leftvsright$any < anyThr & leftvsright$end < anyThr) & (t(leftvsright$any) < anyThr & t(leftvsright$end) < anyThr)
+  adj <- adj & (leftvsleft$any < anyThrSame & leftvsleft$end < anyThrSame) & (t(leftvsleft$any) < anyThrSame & t(leftvsleft$end) < anyThrSame)
+  adj <- adj & (rightvsright$any < anyThrSame & rightvsright$end < anyThrSame) & (t(rightvsright$any) < anyThrSame & t(rightvsright$end) < anyThrSame)
+  if (mode =="inner") adj <- adj & (substrings < 30)
   classes.row <- gsub("_\\d+$","",rownames(adj))
   classes.col <- gsub("_\\d+$","",colnames(adj))
   for (cl in unique(classes.row)) adj[classes.row == cl, classes.col==cl] <- F
@@ -558,11 +587,12 @@ addprefixes <- function(target, firstreadprefix, secondreadprefix, readlength) {
   #get position of all left primers
   leftdist <- abs(target$pos - sapply(target$left, function(x) nchar(strsplit(target$seq,x)[[1]][1])))
   rightdist <- abs(target$pos - sapply(as.character(reverseComplement(DNAStringSet(target$right))), function(x) nchar(strsplit(target$seq,x)[[1]][1])))
-  isleft <- mapply(function(x,y) x < y, leftdist, rightdist)
-  newleft <- ifelse(isleft, target$left, target$right)
-  newright <- ifelse(isleft, target$right, target$left)
-  target$left <- paste(firstreadprefix, newleft, sep="")
-  target$right <- paste(secondreadprefix,newright, sep="")
+  target$isleft <- mapply(function(x,y) x < y, leftdist, rightdist)
+  #newleft <- ifelse(isleft, target$left, target$right)
+  #newright <- ifelse(isleft, target$right, target$left)
+  #target$left <- paste(firstreadprefix, newleft, sep="")
+  #target$right <- paste(secondreadprefix,newright, sep="")
+  
   target
 }
 
@@ -650,9 +680,9 @@ optimTargets2 <- function(targets, input, primerParams,mode="inner",verbose=F) {
 }
 
 
-ewrapper <- function(s1,s2,nrange = 1:10, cutrange = 1:4) {
-  a <- endmatches(s1,s2,nrange) #exactly at the end
-  b <- endmatches(s2,s1,nrange) 
+ewrapper <- function(s1,s2,fun = endmatches, ...) {
+  a <- fun(s1,s2, ...) #exactly at the end
+  b <- fun(s2,s1,...) 
   # for (j in cutrange) {
   #   a <- c(a, endmatches(gsub(sprintf(".{%d}$",j),"",s1),s2,nrange))
   #   b <- c(b, endmatches(gsub(sprintf(".{%d}$",j),"",s2),s1,nrange))
@@ -669,3 +699,11 @@ for (n in rev(nrange)) {
 }   
   n
 }
+
+endmatches.where <- function(s1, s2, n = 6) {
+  
+  s1 <- as.character(reverseComplement(DNAString(s1)))
+    bait <- substr(s1, 1, n)
+     regexpr(bait, s2)
+}
+

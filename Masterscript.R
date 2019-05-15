@@ -17,6 +17,8 @@ spec = matrix(c(
   'gDNA' , 'g', 0, "logical",
   'cDNA', 'c', 0, "logical",
   'optim', 'y',0,"logical",
+  'optimThr','q',1,"integer",
+  'optimThrSame','Q',"integer",
   'blast', 'z', 0, "logical",
   'genomedb', 'E',1,'character',
   'txdb', 'F',1,'character',
@@ -243,7 +245,9 @@ seqlevels(TxDb) <- paste0("chr",seqlevels(TxDb))
 TxDb <- makeTxDbFromGRanges(TxDb)
 
 
-optim <- !is.null(opt$optim)
+optim <- !is.null(opt$optim) | !is.null(opt$optimThr)| !is.null(opt$optimThrSame)
+optim.thr <- ifelse(!is.null(opt$optimThr), opt$optimThr, 15)
+optim.thr.same <- ifelse(!is.null(opt$optimThrSame), opt$optimThrSame, 30)
 blast <- !is.null(opt$blast) | !is.null(opt$txdb)
 
 if (input == "cDNA") {
@@ -338,14 +342,21 @@ if (nested != "RTonly") {
   }
   
 
-
+  #identify for each primer pair if the left or right primer is with x bases of the mutation
+  #add adapters for optimization run
+  if (!is.null(opt$readlength)) {
+    cat("Assuring that the first read / left primer is no more than", opt$readlength, "bases from the mutation\n")
+    targets <- lapply(targets,addprefixes,firstreadprefix = prefixInnerLeft, secondreadprefix=prefixInnerRight, readlength = opt$readlength)
+  } else {
+    targets <- lapply(targets, function(x) {x$isleft <- rep(T,length(x$left)); x})
+  }
   
   # save(targets, input, params_inner, file = "state.rda")
   # stop()
   if (optim) {
     cat("Finding ideal primer pairs (inner PCR):\n")
     cat("Checking", sum(sapply(targets,function(x) length(x$left)))*sum(sapply(targets,function(x) length(x$right))) , "possible combinations of primers for potential to form dimers, this may take a while. To speed up, decrease numprimers or switch off optimization")
-    targets <- optimTargets(targets, input, primerParams = params_inner,verbose=verbose)  
+    targets <- optimTargets(targets, input, primerParams = params_inner,verbose=verbose,firstreadprefix = prefixInnerLeft, secondreadprefix=prefixInnerRight, anyThr=optim.thr, anyThrSame = optim.thr.same)  
     cat("Done...\n")
   } else {
     targets <- lapply(targets, function(x) {
@@ -355,12 +366,7 @@ if (nested != "RTonly") {
     })
   }
   
-  #identify for each primer pair if the left or right primer is with x bases of the mutation
-  #add adapters for optimization run
-  if (!is.null(opt$readlength)) {
-    cat("Assuring that the first read / left primer is no more than", opt$readlength, "bases from the mutation\n")
-    targets <- lapply(targets,addprefixes,firstreadprefix = prefixInnerLeft, secondreadprefix=prefixInnerRight, readlength = opt$readlength)
-  }
+
   
 }
 ##### 4. Design outer primers ########
@@ -460,7 +466,7 @@ if (nested == "full") {
   if (optim) {
     cat("Finding ideal primer pairs (outer PCR):\n")
     cat("Checking", sum(sapply(targets,function(x) length(x$left_outer)))*sum(sapply(targets,function(x) length(x$right_outer))) , "possible combinations of primers for potential to form dimers, this may take a while. To speed up, decrease numprimers or switch off optimization")
-    targets <- optimTargets(targets, input, primerParams = params_outer,mode="outer",verbose=verbose)  
+    targets <- optimTargets(targets, input, primerParams = params_outer,mode="outer",verbose=verbose,anyThr = 30, anyThrSame = 30)  #outer primers: not as critical, use more relaxed thresholds.
     cat("Done...\n")
   } else {
     targets <- lapply(targets, function(x) {
