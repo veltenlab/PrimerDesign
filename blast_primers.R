@@ -61,13 +61,14 @@ evaluate_blast_primers <- function(targets, input, blastdb, mode = "inner", verb
   left <- ifelse(mode == "inner", "left", "left_outer")
   right <- ifelse(mode == "inner", "right", "right_outer")
   for (i in 1:length(targets)) {
-    blast_left <- blast_primers(targets[[i]][[left]], blastdb) %>% filter_blast(targets[[i]]$left)
-    blast_right <- blast_primers(targets[[i]][[right]], blastdb) %>% filter_blast(targets[[i]]$right)
+    cat(i, "\n")
+    blast_left <- blast_primers(targets[[i]][[left]], blastdb) %>% filter_blast(targets[[i]][[left]])
+    blast_right <- blast_primers(targets[[i]][[right]], blastdb) %>% filter_blast(targets[[i]][[right]])
     blast_both <- merge(blast_left, blast_right, by = c("V1","V2"),suffixes = c(".left",".right"))
     #cDNA: Remnove entries on gene of interest
     blast_both$V2 <- gsub("\\..+","",x = blast_both$V2)
     if (input=="cDNA") {
-      blast_both$geneID <- AnnotationDbi::select(org, keys=blast_both$V2, columns="SYMBOL", keytype="ENSEMBL")[,"SYMBOL"]
+      blast_both$geneID <- AnnotationDbi::select(org, keys=blast_both$V2, columns="SYMBOL", keytype="ENSEMBL")[1,"SYMBOL"]
       blast_both <- subset(blast_both, geneID != unique(gsub("--.+","",targets[[i]]$id)))
       remove <- unique(as.integer(gsub("Query_","",blast_both$V1)))
       
@@ -174,7 +175,7 @@ final_blast_primers <- function(output,field, blastdb, removeprefix = "") {
       })
     
     blasted <- do.call(rbind,blasted)
-    bed <- data.frame(chr = paste0("chr",blasted$V2), start = apply(blasted[,c("V9","V10")],1,min), end = apply(blasted[,c("V9","V10")],1,max),
+    bed <- data.frame(chr = paste0(blasted$V2), start = apply(blasted[,c("V9","V10")],1,min), end = apply(blasted[,c("V9","V10")],1,max),
                       name = blasted$id, score = round(blasted$V3), strand = ifelse(blasted$V9 > blasted$V10, "-", "+"),
                       thickStart = min(blasted[,c("V9","V10")]), thickEnd = max(blasted[,c("V9","V10")]),
                       itemRgb = colors[field])

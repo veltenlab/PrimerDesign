@@ -1,6 +1,6 @@
 .libPaths("/g/steinmetz/velten/Software/RPacks3.4.0/")
 options(warn=-1)
-
+if (!interactive()){
 initial.options <- commandArgs(trailingOnly = FALSE)
 file.arg.name <- "--file="
 script.name <- sub(file.arg.name, "", initial.options[grep(file.arg.name, initial.options)])
@@ -18,7 +18,8 @@ spec = matrix(c(
   'cDNA', 'c', 0, "logical",
   'optim', 'y',0,"logical",
   'optimThr','q',1,"integer",
-  'optimThrSame','Q',"integer",
+  'optimThrSame','Q',1,"integer",
+  'optimOuter','Y',0,"logical",
   'blast', 'z', 0, "logical",
   'genomedb', 'E',1,'character',
   'txdb', 'F',1,'character',
@@ -42,13 +43,17 @@ spec = matrix(c(
   'verbose','v',0,'logical'
 ), byrow=TRUE, ncol=4)
  opt = getopt(spec)
- 
+ save(opt , script.name, script.basename, file = "opt.rda")
  
 if ( !is.null(opt$help) ) {
    cat(getopt(spec, usage=TRUE))
   q(status=1)
 }
- 
+ } else {
+   load("opt.rda")
+   cat("Restoring previous parameters\n")
+   source(file.path(script.basename,"check.R"))
+ }
  
  
 
@@ -237,7 +242,7 @@ if (genome == "mm10") {
   org <- org.Hs.eg.db
   
   genome_fasta <- file.path(script.basename,"genomeFiles", "hg38_ucsc.fasta")
-  tx_fasta <-file.path(script.basename,"genomeFiles", "Human_ERCC_combined.convenient.fa.gz")
+  tx_fasta <-file.path(script.basename,"genomeFiles", "Human_ERCC_combined.convenient.fa")
   
 } else stop("Genome needs to be one of hg19, hg38 or mm10")
 
@@ -248,6 +253,8 @@ TxDb <- makeTxDbFromGRanges(TxDb)
 optim <- !is.null(opt$optim) | !is.null(opt$optimThr)| !is.null(opt$optimThrSame)
 optim.thr <- ifelse(!is.null(opt$optimThr), opt$optimThr, 15)
 optim.thr.same <- ifelse(!is.null(opt$optimThrSame), opt$optimThrSame, 30)
+optim.outer <- !is.null(opt$optimOuter)
+
 blast <- !is.null(opt$blast) | !is.null(opt$txdb)
 
 if (input == "cDNA") {
@@ -366,7 +373,8 @@ if (nested != "RTonly") {
     })
   }
   
-
+  save(targets,file="inner.result.rda")
+  
   
 }
 ##### 4. Design outer primers ########
@@ -376,10 +384,17 @@ if (nested != "none" & nested != "RTonly") {
   #determine where in the sequence the selected inner primers bind.  
   targets <- lapply(targets, function(x) {
     us <- ifelse(nested == "RT", x$seq,x$completeSeq)
-    x$start_inner_product <- str_locate(us, x$left)[1,"start"]
-    x$end_inner_product <- str_locate(us,as.character(reverseComplement(DNAString(x$right))))[1,"end"]
+    a <- str_locate(us, gsub(prefixInnerLeft,"",x$left))[1,"start"]
+    b <- str_locate(us, gsub(prefixInnerRight,"",x$right))[1,"start"]
+    c <- str_locate(us,as.character(reverseComplement(DNAString(gsub(prefixInnerRight,"",x$right)))))[1,"end"]
+    d <- str_locate(us,as.character(reverseComplement(DNAString(gsub(prefixInnerLeft,"",x$left)))))[1,"end"]
+    x$end_inner_product <- max(c(a,b,c,d),na.rm = T)
+    x$start_inner_product <- min(c(a,b,c,d),na.rm = T)
+    
     if (x$end_inner_product > nchar(us) - 50) {
-      x$end_inner_product <- str_locate(us,as.character(reverseComplement(DNAString(x$right))))[1,"start"]
+      c <- str_locate(us,as.character(reverseComplement(DNAString(gsub(prefixInnerRight,"",x$right)))))[1,"start"]
+      d <- str_locate(us,as.character(reverseComplement(DNAString(gsub(prefixInnerLeft,"",x$left)))))[1,"start"]
+      x$end_inner_product <- ifelse(is.na(c),d,c)
     }
     x
   })
@@ -463,7 +478,7 @@ if (nested == "full") {
     })
   }
   
-  if (optim) {
+  if (optim.outer) {
     cat("Finding ideal primer pairs (outer PCR):\n")
     cat("Checking", sum(sapply(targets,function(x) length(x$left_outer)))*sum(sapply(targets,function(x) length(x$right_outer))) , "possible combinations of primers for potential to form dimers, this may take a while. To speed up, decrease numprimers or switch off optimization")
     targets <- optimTargets(targets, input, primerParams = params_outer,mode="outer",verbose=verbose,anyThr = 30, anyThrSame = 30)  #outer primers: not as critical, use more relaxed thresholds.
@@ -536,16 +551,16 @@ if (!is.null(opt$bed)) {
   
 }
 
-
-if(!is.null(opt$prefixInner)) {
-  if(!all(is.na(output$left_inner)))  output$left_inner <- paste0(opt$prefixInner,output$left_inner)
-  if(!all(is.na(output$right_inner))) output$right_inner <- paste0(opt$prefixInner,output$right_inner)
-}
-
-if(!is.null(opt$prefixOuter)) {
-  if(!all(is.na(output$left_outer))) output$left_outer <- paste0(opt$prefixOuter,output$left_outer)
-  if(!all(is.na(output$right_outer))) output$right_outer <- paste0(opt$prefixOuter,output$right_outer)
-}
+# 
+# if(!is.null(opt$prefixInner)) {
+#   if(!all(is.na(output$left_inner)))  output$left_inner <- paste0(opt$prefixInner,output$left_inner)
+#   if(!all(is.na(output$right_inner))) output$right_inner <- paste0(opt$prefixInner,output$right_inner)
+# }
+# 
+# if(!is.null(opt$prefixOuter)) {
+#   if(!all(is.na(output$left_outer))) output$left_outer <- paste0(opt$prefixOuter,output$left_outer)
+#   if(!all(is.na(output$right_outer))) output$right_outer <- paste0(opt$prefixOuter,output$right_outer)
+# }
 
 if (!is.null(opt$csv)) {
   write.csv(output,file = opt$csv,quote=F)

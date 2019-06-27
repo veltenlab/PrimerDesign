@@ -90,7 +90,7 @@ getcDNASeqfromCoordinate <- function(targets, TxDb, Bsgenome, rangeInner, margin
     if (!width(thisexons[sapply(thisexons$tx_id, function(y) all(txids %in% y))]) < rangeInner * margin) thisexons <- thisexons[sapply(thisexons$tx_id, function(y) all(txids %in% y))] #exons that occur in all transcripts only
     
     genes <- unique(unlist(thisexons$gene_id))
-    symbol <- AnnotationDbi::select(org, keys=genes, columns="SYMBOL", keytype="ENSEMBL")[,"SYMBOL"]
+    symbol <- AnnotationDbi::select(org, keys=genes, columns="SYMBOL", keytype="ENSEMBL")[1,"SYMBOL"]
     thisexons <- reduce(thisexons)
     target <- targets[unique(queryHits(x))]
     whoistargetExon <- subjectHits(findOverlaps(target, thisexons))
@@ -386,12 +386,12 @@ optimTargets <- function(targets, input, primerParams,mode="inner",verbose=F,fir
   any <- matrix(primer3result$V2, nrow = length(allleft), ncol = length(allright), dimnames = list(names(allleft), names(allright)), byrow = T)
   end <- matrix(primer3result$V3, nrow = length(allleft), ncol = length(allright), dimnames = list(names(allleft), names(allright)), byrow = T)
   list(any = any, end = end)
+  
   }
   leftvsright <- getany(allleft, allright) 
   leftvsleft <- getany(allleft, allleft)#is this necessary? these byproducts would die out 
    rightvsright <- getany(allright, allright)#is this necessary?
   
-  save(leftvsright,leftvsleft,rightvsright,allleft, allright, targets,file="primer3result.rda")
   #check for potential left-left and right-right dimers
   
   
@@ -407,10 +407,15 @@ optimTargets <- function(targets, input, primerParams,mode="inner",verbose=F,fir
   }
   #v2: Use cliquer
   #set up a graph - multipartite, i.e. no 2 primers from the same level are connected to each other.
+   
+   
   adj <- (leftvsright$any < anyThr & leftvsright$end < anyThr) & (t(leftvsright$any) < anyThr & t(leftvsright$end) < anyThr)
   adj <- adj & (leftvsleft$any < anyThrSame & leftvsleft$end < anyThrSame) & (t(leftvsleft$any) < anyThrSame & t(leftvsleft$end) < anyThrSame)
   adj <- adj & (rightvsright$any < anyThrSame & rightvsright$end < anyThrSame) & (t(rightvsright$any) < anyThrSame & t(rightvsright$end) < anyThrSame)
-  if (mode =="inner") adj <- adj & (substrings < 30)
+  if (mode =="inner") adj <- adj & (substrings < 30) & (t(substrings)<30)
+  save(adj,leftvsright,file = "adj.rda")
+  adj <- adj[diag(leftvsright$any) < anyThr , diag(leftvsright$any) < anyThr]
+  
   classes.row <- gsub("_\\d+$","",rownames(adj))
   classes.col <- gsub("_\\d+$","",colnames(adj))
   for (cl in unique(classes.row)) adj[classes.row == cl, classes.col==cl] <- F
