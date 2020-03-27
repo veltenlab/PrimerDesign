@@ -6,8 +6,8 @@ if(!file.exists(file.path(script.basename,"config.txt"))) {
   cat("No configuration file found.\n")
   cat("Please create a file config.txt in the home directory of the PrimerDesign tool.\n")
   cat("The first line of the file should specify the path to the binaries folder of NCBI blast (e.g. /home/User/ncbi-blast-2.6.0/bin)\n")
-  cat("The second line of the file should specify the path to the folder containing the primer3_core executable (e.g. /home/User/primer3/)\n")
-  cat("This folder also needs to contain a subfolder named primer3_config; this should usually be the case.\n")
+  cat("The second line of the file should specify the path to the folder containing the primer3_core executable (e.g. /home/User/primer3/). This folder also needs to contain a subfolder named primer3_config; this should usually be the case.\n")
+  cat("The third line of the file should specify the path to the cliquer executable (e.g. /home/User/cliqr/cl)\n")
   cat("Primer3 and the config folder can be downloaded from https://github.com/primer3-org/primer3\n")
   cat("BLAST can be downloaded from https://blast.ncbi.nlm.nih.gov/Blast.cgi?CMD=Web&PAGE_TYPE=BlastDocs&DOC_TYPE=Download\n")
   stop("missing config.txt")
@@ -31,6 +31,7 @@ if(!file.exists(file.path(script.basename,"config.txt"))) {
 } else {
   NCBI_path <- readLines(file.path(script.basename,"config.txt"))[1]
   primer3_path <- readLines(file.path(script.basename,"config.txt"))[2]
+  cliqr_path <- readLines(file.path(script.basename,"config.txt"))[3]
   if(!file.exists(file.path(NCBI_path, "makeblastdb")) | !file.exists(file.path(primer3_path, "primer3_core"))) {
     file.remove(file.path(script.basename,"config.txt"))
     stop("The config.txt file was incorrect. I have removed the file, please restart the program and specify correct paths to NCBI Blast and primer3.")
@@ -56,6 +57,7 @@ pkgTest("R.utils")
 pkgTest("utils")
 pkgTest("magrittr")
 pkgTest("stringr")
+pkgTest("igraph")
 pkgTest("GenomicRanges", bc=T) #bionductor
 pkgTest("rtracklayer", bc =T) #bioconductor
 pkgTest("GenomicFeatures", bc=T) #bioconductor
