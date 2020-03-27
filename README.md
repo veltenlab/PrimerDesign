@@ -68,7 +68,9 @@ Alternatively, --nested RT will additionally design PCR primers.
 | --gDNA | none  |  Input is gDNA (not compatible with gene symbols) |
 | --cDNA | none  |  Input is cDNA |
 | --genome | hg19, hg38 or mm10 | Genome version to use |
-| --optim | none | Select set of primer pairs with minimal 3' overlap to reduce byproduct formation. This slows down computations a lot if --numprimers or the number of targets is too high |
+| --optim | none | Select set of primer pairs with minimal 3' overlap to reduce byproduct formation.|
+| --optimThr | int | Threshold of primer complimentarity to allow. Defaults to 15. |
+| --optimThrSame | int | Threshold of self-complimentarity to allow. Defaults to 30. |
 | --blast | none | Blast all primer candidates to select candidates that do not form byproduct from. Note that final primers will always be blasted aganst the genome if bed output is desired |
 | --genomedb | none | Path to Blast database for genome. If left out, will be created if needed|
 | --txdb | none | Path to Blast database for transcriptome. If left out, will be created if needed|
