@@ -423,7 +423,7 @@ optimTargets <- function(targets, input, primerParams,mode="inner",verbose=F,fir
   #write_graph(primerGraph, file = "primergraph.dimacs", format = "dimacs", capacity = edge.attributes(primerGraph)$weight)
   write_graph(primerGraph, file = "primergraph.dimacs", format = "dimacs", capacity = rep(1, ecount(primerGraph)))
   system("perl -pe 's/^n.+\\n//; s/^a (\\d+ \\d+) \\d+/e $1/;' -i primergraph.dimacs")
-  clique <- system("/g/steinmetz/velten/Software/cliquer-1.21/cl -x -u primergraph.dimacs", intern = T)
+  clique <- system(sprintf("%s -x -u primergraph.dimacs",cliqr_path), intern = T)
   parsed <- as.integer(strsplit(clique,"[ a-z=,:]+")[[1]])
   size <- parsed[2]
   weight <- parsed[3]
