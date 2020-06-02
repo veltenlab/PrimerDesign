@@ -8,6 +8,8 @@ Primers are checked against each other to select sets of primers with minimal 3'
 
 Several use cases are described in detail below.
 
+Run time depends on the number of primers tested but typically stays below 30 minutes on a default laptop computer.
+
 ## Requirements and first run
 
 PrimerDesign tool requires [primer3](https://github.com/primer3-org/primer3), [NCBI Blast](https://blast.ncbi.nlm.nih.gov/Blast.cgi?PAGE_TYPE=BlastDocs&DOC_TYPE=Download), and [cliquer](https://users.aalto.fi/~pat/cliquer.html) to be available on your system; the paths need to be specified by the user in the first run of the program. All other requirements are installed automatically when the package if first run; in case you do not have write permissions to your `.libPaths()`, uncomment the first line of the scripot and specifiy a writeable folder that R libraries will be installed to. 
