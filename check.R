@@ -39,18 +39,30 @@ if(!file.exists(file.path(script.basename,"config.txt"))) {
   
 }
 
-
 pkgTest <- function(x, bc =F) {
-  if (!require(x,character.only = TRUE))
-  {
-    cat("Package",x,"is missing, installing...")
-    if (bc) biocLite(x) else install.packages(x,dep=TRUE,repos = "http://cran.us.r-project.org")
-    
-    if(!require(x,character.only = TRUE)) stop("Package not found")
-  }
+    print(paste0('Testing for R package: ',x,' ...'))
+    if (!require(x,character.only = TRUE))
+    {
+        cat("Package",x,"is missing, installing...")
+        if (bc){
+            if(getRversion() >= 3.5){
+                BiocManager::install(x)
+            }else{
+                biocLite(x)
+            }
+        }else{
+            install.packages(x,dep=TRUE,repos = "http://cran.us.r-project.org")
+        }
+        if(!require(x,character.only = TRUE)) stop("Package not found")
+    }
 }
 
-source("https://bioconductor.org/biocLite.R")
+if(getRversion() >= 3.5){
+    if (!requireNamespace("BiocManager", quietly = TRUE))
+        install.packages("BiocManager",repos = "http://cran.us.r-project.org")
+}else{
+    source("https://bioconductor.org/biocLite.R")
+}
 
 pkgTest("getopt")
 pkgTest("R.utils")
@@ -59,7 +71,7 @@ pkgTest("magrittr")
 pkgTest("stringr")
 pkgTest("igraph")
 pkgTest("GenomicRanges", bc=T) #bionductor
-pkgTest("rtracklayer", bc =T) #bioconductor
+pkgTest("rtracklayer", bc=T) #bioconductor
 pkgTest("GenomicFeatures", bc=T) #bioconductor
 
 
