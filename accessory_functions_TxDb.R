@@ -45,6 +45,7 @@ getGenomicfromCoordinate <- function(targets, Bsgenome, rangeInner, rangeOuter, 
   
    r <- ifelse(is.na(rangeOuter), 5000, max(c(5000,rangeOuter * margin)))
    targets$completeSeq <- as.character(getSeq(Bsgenome, targets+r))
+   targets <- split(targets,seq(targets))
    out <- lapply(targets, function(x) {
      list(Range = reduce(x),
           seq = x$seq,
@@ -122,7 +123,7 @@ getcDNASeqfromCoordinate <- function(targets, TxDb, Bsgenome, rangeInner, margin
   targets$completeSeq <- sapply(sequences, "[[",3)
   targets$sense <- sapply(sequences, "[[",5)
   
-  
+  targets <- split(targets,seq(targets))
   out <- lapply(targets, function(x) {
     list(Range = reduce(x),
          seq = x$seq,

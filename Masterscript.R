@@ -1,4 +1,6 @@
-.libPaths("/g/steinmetz/velten/Software/RPacks3.4.0/")
+## set your R library path source here - defaults to .libPaths()
+###.libPaths("/g/steinmetz/velten/Software/RPacks3.4.0/")
+
 options(warn=-1)
 if (!interactive()){
 initial.options <- commandArgs(trailingOnly = FALSE)
@@ -8,6 +10,11 @@ script.basename <- dirname(script.name)
 
 source(file.path(script.basename,"check.R"))
 
+## create source directory for genome files
+if(!dir.exists(file.path(script.basename,"genomeFiles"))){
+    cat("Creating directory for genomes 'genomesFiles'\n")
+    dir.create(file.path(script.basename,"genomeFiles"))
+}
 
 ###### 1. User input ######
 
@@ -176,9 +183,9 @@ if (genome == "mm10") {
   if(!file.exists(file.path(script.basename,"genomeFiles", "Mus_musculus.GRCm38.92.chr.gtf.gz"))) {
     cat("This appears to be the first time that you use the mm10 genome.\n")
     cat("I am downloading the required annotation and sequence files. Please be patient.\n")
-    download.file("http://steinmetzlab.embl.de/shiny/indexplorer/Mus_musculus.GRCm38.92.chr.gtf.gz", destfile = file.path(script.basename,"genomeFiles", "Mus_musculus.GRCm38.92.chr.gtf.gz"))
-    download.file("http://steinmetzlab.embl.de/shiny/indexplorer/Mus_musculus.GRCm38.73.dna.chromosome.all.spikes.fa.gz", destfile = file.path(script.basename,"genomeFiles", "Mus_musculus.GRCm38.73.dna.chromosome.all.spikes.fa.gz"))
-    download.file("http://steinmetzlab.embl.de/shiny/indexplorer/Mus_musculus.GRCm38.cdna.convenient.all.fa.gz", destfile = file.path(script.basename,"genomeFiles", "Mus_musculus.GRCm38.cdna.convenient.all.fa.gz"))
+    download.file("http://steinmetzlab.embl.de/genomes/Mus_musculus.GRCm38.92.chr.gtf.gz", destfile = file.path(script.basename,"genomeFiles", "Mus_musculus.GRCm38.92.chr.gtf.gz"))
+    download.file("http://steinmetzlab.embl.de/genomes/Mus_musculus.GRCm38.73.dna.chromosome.all.spikes.fa.gz", destfile = file.path(script.basename,"genomeFiles", "Mus_musculus.GRCm38.73.dna.chromosome.all.spikes.fa.gz"))
+    download.file("http://steinmetzlab.embl.de/genomes/Mus_musculus.GRCm38.cdna.convenient.all.fa.gz", destfile = file.path(script.basename,"genomeFiles", "Mus_musculus.GRCm38.cdna.convenient.all.fa.gz"))
     cat("Finished downloading, unpacking. Please be patient.\n")
     gunzip(file.path(script.basename,"genomeFiles", "Mus_musculus.GRCm38.73.dna.chromosome.all.spikes.fa.gz"))
     gunzip(file.path(script.basename,"genomeFiles", "Mus_musculus.GRCm38.cdna.convenient.all.fa.gz"))
@@ -203,9 +210,9 @@ if (genome == "mm10") {
   if(!file.exists(file.path(script.basename,"genomeFiles", "Homo_sapiens.GRCh37.87.chr.gtf.gz"))) {
     cat("This appears to be the first time that you use the hg19 genome.\n")
     cat("I am downloading the required annotation and sequence files. Please be patient.\n")
-    download.file("http://steinmetzlab.embl.de/shiny/indexplorer/Homo_sapiens.GRCh37.87.chr.gtf.gz", destfile = file.path(script.basename,"genomeFiles", "Homo_sapiens.GRCh37.87.chr.gtf.gz"))
-    download.file("http://steinmetzlab.embl.de/shiny/indexplorer/Homo_sapiens.GRCh37.68.dna.chromosomes.withERCC.fa.gz", destfile = file.path(script.basename,"genomeFiles", "Homo_sapiens.GRCh37.68.dna.chromosomes.withERCC.fa.gz"))
-    download.file("http://steinmetzlab.embl.de/shiny/indexplorer/Human_ERCC_combined.convenient.fa.gz", destfile = file.path(script.basename,"genomeFiles", "Human_ERCC_combined.convenient.fa.gz"))
+    download.file("http://steinmetzlab.embl.de/genomes/Homo_sapiens.GRCh37.87.chr.gtf.gz", destfile = file.path(script.basename,"genomeFiles", "Homo_sapiens.GRCh37.87.chr.gtf.gz"))
+    download.file("http://steinmetzlab.embl.de/genomes/Homo_sapiens.GRCh37.68.dna.chromosomes.withERCC.fa.gz", destfile = file.path(script.basename,"genomeFiles", "Homo_sapiens.GRCh37.68.dna.chromosomes.withERCC.fa.gz"))
+    download.file("http://steinmetzlab.embl.de/genomes/Human_ERCC_combined.convenient.fa.gz", destfile = file.path(script.basename,"genomeFiles", "Human_ERCC_combined.convenient.fa.gz"))
     cat("Finished downloading, unpacking. Please be patient.\n")
     gunzip(file.path(script.basename,"genomeFiles", "Homo_sapiens.GRCh37.68.dna.chromosomes.withERCC.fa.gz"))
     gunzip(file.path(script.basename,"genomeFiles", "Human_ERCC_combined.convenient.fa.gz"))
@@ -227,9 +234,9 @@ if (genome == "mm10") {
   if(!file.exists(file.path(script.basename,"genomeFiles", "Homo_sapiens.GRCh38.89.chr.protein-coding.exon.gtf.gz"))) {
     cat("This appears to be the first time that you use the hg38 genome.\n")
     cat("I am downloading the required annotation and sequence files. Please be patient.\n")
-    download.file("http://steinmetzlab.embl.de/shiny/indexplorer/Homo_sapiens.GRCh38.89.chr.protein-coding.exon.gtf.gz", destfile = file.path(script.basename,"genomeFiles", "Homo_sapiens.GRCh38.89.chr.protein-coding.exon.gtf.gz"))
-    download.file("http://steinmetzlab.embl.de/shiny/indexplorer/hg38_ucsc.fasta.gz", destfile = file.path(script.basename,"genomeFiles", "hg38_ucsc.fasta.gz"))
-    download.file("http://steinmetzlab.embl.de/shiny/indexplorer/Human_ERCC_combined.convenient.fa.gz", destfile = file.path(script.basename,"genomeFiles", "Human_ERCC_combined.convenient.fa.gz"))
+    download.file("http://steinmetzlab.embl.de/genomes/Homo_sapiens.GRCh38.89.chr.protein-coding.exon.gtf.gz", destfile = file.path(script.basename,"genomeFiles", "Homo_sapiens.GRCh38.89.chr.protein-coding.exon.gtf.gz"))
+    download.file("http://steinmetzlab.embl.de/genomes/hg38_ucsc.fasta.gz", destfile = file.path(script.basename,"genomeFiles", "hg38_ucsc.fasta.gz"))
+    download.file("http://steinmetzlab.embl.de/genomes/Human_ERCC_combined.convenient.fa.gz", destfile = file.path(script.basename,"genomeFiles", "Human_ERCC_combined.convenient.fa.gz"))
     cat("Finished downloading, unpacking. Please be patient.\n")
     gunzip(file.path(script.basename,"genomeFiles", "hg38_ucsc.fasta.gz"))
     gunzip(file.path(script.basename,"genomeFiles", "Human_ERCC_combined.convenient.fa.gz"))
