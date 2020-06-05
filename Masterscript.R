@@ -1,6 +1,6 @@
 ## set your R library path source here - defaults to .libPaths()
 ###.libPaths("/g/steinmetz/velten/Software/RPacks3.4.0/")
-.libPaths("/tmpdata/story/meow/PrimerDesign/Software/")
+
 options(warn=-1)
 if (!interactive()){
 initial.options <- commandArgs(trailingOnly = FALSE)

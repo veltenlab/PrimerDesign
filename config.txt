@@ -1,3 +1,0 @@
-/g/steinmetz/gschwind/software/blast+/ncbi-blast-2.6.0+/bin
-/g/steinmetz/velten/Scripts/Primer/primer3-2.3.7/src/
-/g/steinmetz/velten/Software/cliquer-1.21/cl
