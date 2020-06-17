@@ -12,9 +12,9 @@ Run time depends on the number of primers tested but typically stays below 30 mi
 
 ## Requirements and first run
 
-PrimerDesign tool requires [primer3](https://github.com/primer3-org/primer3), [NCBI Blast](https://blast.ncbi.nlm.nih.gov/Blast.cgi?PAGE_TYPE=BlastDocs&DOC_TYPE=Download), and [cliquer](https://users.aalto.fi/~pat/cliquer.html) to be available on your system; the paths need to be specified by the user in the first run of the program. All other requirements are installed automatically when the package if first run; in case you do not have write permissions to your `.libPaths()`, uncomment the first line of the scripot and specifiy a writeable folder that R libraries will be installed to. 
+PrimerDesign tool runs under Linux and requires [primer3](https://github.com/primer3-org/primer3), [NCBI Blast](https://blast.ncbi.nlm.nih.gov/Blast.cgi?PAGE_TYPE=BlastDocs&DOC_TYPE=Download), and [cliquer](https://users.aalto.fi/~pat/cliquer.html) to be available on your system; the paths need to be specified by the user in the first run of the program. All other requirements are installed automatically when the package if first run; in case you do not have write permissions to your `.libPaths()`, uncomment the first line of the scripot and specifiy a writeable folder that R libraries will be installed to.
 
-Genome data will be downloaded and prepared in the first run for a given genom (mm10, hg19 or hg38), so please be patient when you first run this software. 
+Genome data will be downloaded and prepared in the first run for a given genom (mm10, hg19 or hg38), so please be patient when you first run this software. In total, installation may take between 5 minutes and an hour depending on the prior availability of packages and internet connection.
 
 ## Use cases
 
